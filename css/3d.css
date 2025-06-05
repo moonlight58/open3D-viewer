@@ -1,0 +1,376 @@
+
+html, body , canvas {
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #33334C;
+}
+
+#systemmenu {
+    position: absolute;
+    z-index: 100;
+    right:10px;
+    top: 15px;
+    width: 150px;
+    max-width: 300px;
+/*    background-color: #007cc2;*/
+    color: #fff;
+    text-align: center;
+    cursor: pointer;
+ }
+
+#render-canvas {
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+}
+
+/* Modal popup */
+.mpopup {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    padding-top: 50px;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgb(0,0,0);
+    background-color: rgba(0,0,0,0.4);
+}
+.modal-content {
+    position: relative;
+    background-color: #fff;
+    margin: auto;
+    padding: 0;
+    width: 1000px;
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+    -webkit-animation-name: animatetop;
+    -webkit-animation-duration: 0.4s;
+    animation-name: animatetop;
+    animation-duration: 0.4s;
+    border-radius: 0.3rem;
+}
+.modal-header {
+    padding: 2px 12px;
+    background-color: #ffffff;
+    color: #333;
+    border-bottom: 1px solid #e9ecef;
+    border-top-left-radius: 0.3rem;
+    border-top-right-radius: 0.3rem;
+}
+.modal-header h2{
+    font-size: 1.25rem;
+    margin-top: 14px;
+    margin-bottom: 14px;
+}
+.modal-body {
+    padding: 2px 12px;
+}
+.modal-footer {
+    padding: 1rem;
+    background-color: #ffffff;
+    color: #333;
+    border-top: 1px solid #e9ecef;
+    border-bottom-left-radius: 0.3rem;
+    border-bottom-right-radius: 0.3rem;
+    text-align: right;
+}
+
+.close {
+    color: #888;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+.close:hover, .close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* add animation effects */
+@-webkit-keyframes animatetop {
+    from {top:-300px; opacity:0}
+    to {top:0; opacity:1}
+}
+
+@keyframes animatetop {
+    from {top:-300px; opacity:0}
+    to {top:0; opacity:1}
+}
+
+/* Modal popup */
+
+#listing{
+    position:fixed;
+    width:60px;
+    height:60px;
+    bottom:300px;
+    right:20px;
+    background-color:#4285F4;
+    color:#FFF;
+    border-radius:50px;
+    text-align:center;
+    box-shadow: 2px 2px 3px #999;
+    cursor: pointer;
+    visibility: hidden;
+}
+
+#rotation{
+	position:fixed;
+	width:60px;
+	height:60px;
+	bottom:230px;
+	right:20px;
+	background-color:#4285F4;
+	color:#FFF;
+	border-radius:50px;
+	text-align:center;
+    box-shadow: 2px 2px 3px #999;
+    cursor: pointer;
+}
+
+#fullscreen{
+    position:fixed;
+    width:60px;
+    height:60px;
+    bottom:160px;
+    right:20px;
+    background-color:#4285F4;
+    color:#FFF;
+    border-radius:50px;
+    text-align:center;
+    box-shadow: 2px 2px 3px #999;
+    cursor: pointer;
+}
+
+#glasses{
+    position:fixed;
+    width:60px;
+    height:60px;
+    bottom:160px;
+    right:20px;
+    background-color:#4285F4;
+    color:#FFF;
+    border-radius:50px;
+    text-align:center;
+    box-shadow: 2px 2px 3px #999;
+    cursor: pointer;
+}
+
+#home{
+    position:fixed;
+    width:60px;
+    height:60px;
+    bottom:90px;
+    right:20px;
+    background-color:#4285F4;
+    color:#FFF;
+    border-radius:50px;
+    text-align:center;
+    box-shadow: 2px 2px 3px #999;
+    cursor: pointer;
+}
+
+#info{
+    position:fixed;
+    width:60px;
+    height:60px;
+    bottom:20px;
+    right:20px;
+    background-color:#4285F4;
+    color:#FFF;
+    border-radius:50px;
+    text-align:center;
+    box-shadow: 2px 2px 3px #999;
+    cursor: pointer;
+}
+
+ .my-float{
+    margin-top:16px;
+    font-size:26px;
+}
+
+.ripple {
+  background-position: center;
+  transition: background 0.8s;
+}
+.ripple:hover {
+  background: #47a7f5 radial-gradient(circle, transparent 1%, #47a7f5 1%) center/15000%;
+}
+.ripple:active {
+  background-color: #6eb9f7;
+  background-size: 100%;
+  transition: background 0s;
+}
+
+.trans-mild {
+    -webkit-transition: all 0.3s ease;
+    transition: all 0.3s ease
+}
+
+img {
+    border: none
+}
+
+a {
+    text-decoration: none
+}
+
+table {
+    border-spacing: 0;
+    border-collapse: separate
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    font-size: 15px
+}
+
+details {
+    font: 16px "Open Sans", Calibri, sans-serif;
+    width: 340px;
+    cursor: pointer;
+}
+
+details > summary {
+    padding: 2px 6px;
+    width: 340px;
+    background-color: #4285F4;
+    border: none;
+    /*box-shadow: 3px 3px 4px black;*/
+    cursor: pointer;
+}
+
+details > p {
+    background-color: #0d47a1;
+    width: 340px;
+    padding: 2px 6px;
+    margin: 0;
+    /*box-shadow: 3px 3px 4px black;*/
+}
+
+details[open] > summary {
+    background-color: #33b5e5;
+    color:#FFFFFF;
+}
+
+section#switches-box {
+    display: none;
+    z-index: 10;
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 370px;
+    /*padding: 20px;*/
+    background-color: transparent;
+    color: #fff;
+    max-height: 90%;
+    overflow-y: auto;   /*dj1: was hidden */
+}
+
+#minus , #plus{
+    float: right;
+    height:25px;
+    width:25px;
+    border:1px black solid;
+    border-radius:50%;
+    cursor: pointer;
+}
+#minus:hover{
+    background-color:red;
+    border:none;
+}
+#plus:hover{
+    background-color:green;
+    border:none;
+}
+
+.bt  {
+    z-index: 11;
+    float: right;
+    clear: both;
+}
+
+.cp  {
+ color: #FFFFFF;
+}
+
+p{
+    opacity: 1;
+}
+
+.off {
+    opacity: 0.3;
+}
+
+.par:hover {
+    text-decoration: underline;
+}
+
+.cp:hover {
+    text-decoration: underline;
+}
+
+section#mesh-label {
+    position: absolute;
+    z-index: 100;
+    top: 5px;
+    left: 50%;
+    max-width: 300px;
+    -webkit-transform: translateX(-50%);
+    transform: translateX(-50%);
+    width: 360px;
+    background-color: #007cc2;
+    color: #fff;
+    text-align: center;
+}
+
+section#mesh-label div.mesh {
+    padding: 7.5px;
+    padding-bottom: 0
+}
+
+section#mesh-label div.layer {
+    padding: 7.5px;
+    padding-top: 0;
+    font-size: 90%;
+    opacity: .8
+}
+
+.image{
+  height:80px;
+  width:80px;
+margin:10px;
+}
+
+.text{
+  margin:5px;
+  text-align:center;
+display:flex;
+}
+
+/* question mark panel start... */
+
+div.item {
+    /* To correctly align image, regardless of content height: */
+    vertical-align: top;
+    display: inline-block;
+    /* To horizontally center images and caption */
+    text-align: center;
+    /* The width of the container also implies margin around the images. */
+    width: 120px;
+}
+.qimg {
+    width: 80px;
+    height: 80px;
+    background-color: white;
+}
+.caption {
+    /* Make the caption a block so it occupies its own line. */
+    display: block;
+}

@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en-us" xmlns="http://www.w3.org/1999/html">
+<head>
+<meta charset="utf-8">
+<title>Anatomy Leiden LUMC : Open 3D webviewer</title>
+<link rel="stylesheet" href="css/3d.css" />
+</head>
+<body>
+<script src="js/babylon.js"></script>
+<script src="js/babylonjs.loaders.js"></script>
+<canvas id="render-canvas"></canvas>
+<section id="mesh-label"></section>
+<section id="switches-box" style="display: block;"></section>
+<div id="mpopupBox" class="mpopup">   <!-- Modal popup box with viewer disclaimer and info -->
+    <div class="modal-content"><div class="modal-header"><span class="close">×</span><h2>Leiden University Medical Center (LUMC): Anatomy department<br>Open 3D viewer developer : Daniel Jansma</h2></div>
+        <div class="modal-body">
+            <p>The open 3D webviewer code is provided “as is” under a GPL 3.0 license, see the basic use options below</p>
+            <p>Tutorials about further options, viewer hosting, useful links and preparing webmodels: <a href="https://caskanatomy.info/open3dviewertutorials" target="_blank" rel="noopener noreferrer">https://caskanatomy.info/open3dviewertutorials</a><br>Information about our open 3D anatomy model:<a href="https://anatomytool.org/open3dmodel" target="_blank" rel="noopener noreferrer"> https://anatomytool.org/open3dmodel</a><br></p>
+            <p>3D Model (.glb) on a webserver can be viewed interactively within this viewer using a regular webbrowser like Chrome, Edge or Firefox etc. Pressing arrows on the keyboard with focus on the viewport can make the model turn. Pressing + or - will zoom the model in or out. You can also turn structures on or off individually or in groups in the top menu. &nbsp;</p>
+            <div class="item">
+                <img src="img/drag_to_rotate.svg" class='qimg' title="Drag to rotate" alt="Drag to rotate" />
+                <span class="caption">Drag to rotate</span>
+            </div>
+            <div class="item">
+                <img src="img/drag_two_fingers_to_pan.svg" class='qimg' title="Drag two fingers to pan" alt="Drag two fingers to pan" />
+                <span class="caption">Drag two fingers to pan</span>
+            </div>
+            <div class="item">
+                <img src="img/tap_to_select.svg" class='qimg' title="Tap to select" alt="Tap to select" />
+                <span class="caption">Tap to select</span>
+            </div>
+            <div class="item">
+                <img src="img/pinch_zoom_in.svg" class='qimg' title="Pinch to zoom in" alt="Pinch to zoom in" />
+                <span class="caption">Pinch to zoom in</span>
+            </div>
+            <div class="item">
+                <img src="img/pinch_zoom_out.svg" class='qimg' title="Pinch to zoom out" alt="Pinch to zoom out" />
+                <span class="caption">Pinch to zoom out</span>
+            </div><br>
+            <div class="item">
+                <img src="img/click_to_select.svg" class='qimg' title="Left-click and drag to rotate" alt="Left-click and drag to rotate" />
+                <span class="caption">Left-click and drag to rotate</span>
+            </div>
+            <div class="item">
+                <img src="img/scroll_to_zoom.svg" class='qimg' title="Scroll-wheel to zoom in or out" alt="Scroll-wheel to zoom in or out" />
+                <span class="caption">Scroll-wheel to zoom in or out</span>
+            </div>
+            <div class="item">
+                <img src="img/click_and_drag_right_to_pan.svg" class='qimg' title="Right-click and drag to pan" alt="Right-click and drag to pan" />
+                <span class="caption">Right-click and drag to pan</span>
+            </div>
+            <div class="item">
+                <img src="img/click_to_select.svg" class='qimg' title="Left-click to select, Double-click to hide" alt="Left-click to select, Double-click to hide" />
+                <span class="caption">Left-click to select, Double-click to hide</span>
+            </div>
+        </div><div class="modal-footer"></div></div></div>
+<div id="listing" class="ripple"><img src="img/list.svg" title="export list active structures" alt="Autorotation on/off" class="my-float" height="30px" /></div>
+<div id="rotation" class="ripple"><img src="img/rotate.svg" title="Autorotation on/off" alt="Autorotation on/off" class="my-float" height="30px" /></div>
+<div id="fullscreen" class="ripple"><img src="img/expand.svg" title="Full screen on/off" alt="Full screen on/off" class="my-float" height="30px" /></div>
+<div id="home" class="ripple"><img src="img/home.svg" title="Reload model" alt="Reload model" class="my-float" height="30px" /></div>
+<div id="info" class="ripple"><img src="img/info.svg" title="Disclaimer and options" alt="Disclaimer and options" class="my-float" height="30px" /></div>
+<script>
+    var primblockar = [],struclookup = [],menupars = [],menuparsvalues = [],chopped = '',cleanmenu = [],transformnodesar=[], instructionsOn = false, glb = true;
+    var mpopup = document.getElementById('mpopupBox'), close = document.getElementsByClassName("close")[0];mod = document.getElementsByClassName("modal-content")[0];
+    var canvas = document.getElementById("render-canvas"), engine = new BABYLON.Engine(canvas), scene = new BABYLON.Scene(engine), hl = new BABYLON.HighlightLayer("hl1", scene);hl.outerGlow = false;
+    BABYLON.Scene.DoubleClickDelay= 800; // ms
+    let model=getUrlArgument('model');
+    let set=getUrlArgument('subset');
+    let selection=getUrlArgument('export');
+    if(set){loadScript('3dmodels/'+model+'/'+set+'.js');} //dj1
+    if(selection){document.getElementById('listing').style.visibility = 'visible';}
+    document.title = 'open 3D webviewer : '+model+' model';
+    BABYLON.SceneLoader.Append("./3dmodels/"+model+"/", model+".glb", scene);
+    function getUrlArgument(arg) {var query, vars, i, pair; query = window.location.search.substring(1);vars = query.split('&');
+        for (i = 0; i < vars.length; i += 1) {pair = vars[i].split('='); if (pair[0] === arg) {return pair[1];}} return false;}
+    scene.executeWhenReady(function () {
+        scene.createDefaultCamera(true, true, true);
+        var cam = scene.activeCamera; cam.wheelPrecision = 600; cam.pinchPrecision = 800; cam.alpha += Math.PI;cam.panningSensibility = 1600; cam.useAutoRotationBehavior = false;
+        var helper = scene.createDefaultEnvironment(); helper.ground.dispose(); helper.skybox.dispose(); scene.environmentIntensity = 3;
+        scene.skipPointerMovePicking = true; scene.pointerUpPredicate = ()=> false; scene.pointerDownPredicate = ()=> false; scene.pointerMovePredicate = ()=> false;
+        document.getElementById('rotation').addEventListener('click', function (e) { e.preventDefault(); cam.useAutoRotationBehavior = !cam.useAutoRotationBehavior;cam.autoRotationBehavior.idleRotationSpeed = -0.4;});
+        if(model.split("_")[0] === 'overview'){
+            scene.transformNodes.forEach((el) => {
+                if (el.name.endsWith('_right')){ //transform_menu_parent has right_ name at the end!
+                let clonedparentname = el.name.replace("_right", "_left");
+                scene.getTransformNodeByName(el.name).clone(clonedparentname);
+                let slottrans = scene.getTransformNodeByName(clonedparentname);
+                    for (var i = 0; i < slottrans.getChildMeshes(false).length; i++){
+                        let meshnameparts = (slottrans.getChildMeshes(false)[i].name).split('.');
+                        slottrans.getChildMeshes(false)[i].name= meshnameparts[meshnameparts.length - 2]+'.l';}
+                }});}
+        scene.transformNodes.forEach((el) => {
+            while (el.parent !== null && el.parent.name !== '__root__') { el = el.parent; }
+            if (!transformnodesar.includes(el.name)) {
+                transformnodesar.push(el.name);
+                let childmeshcompactar = [];
+                let childMesh = el.getChildMeshes();
+                for (let i = 0; i < childMesh.length; i++) {
+                    let rename_mesh = childMesh[i].name.split("_");
+                    childMesh[i].name = rename_mesh[0];
+                    if (!childmeshcompactar.includes(childMesh[i].name)) {childmeshcompactar.push(childMesh[i].name);}
+                }
+                cleanmenu[el.name]=childmeshcompactar;
+            }});
+
+        menupars = Object.keys(cleanmenu); sortedmenupars = Object.keys(cleanmenu).sort();
+        menuparsvalues = Object.values(cleanmenu);
+        let codeBlock ='<details class="menu"><summary>Menu</summary>';
+        for (let i = 0; i < sortedmenupars.length; i++) { let parname=sortedmenupars[i];
+            if(sortedmenupars[i].endsWith('_right')){ parname = 'Right '+parname.slice(0,-6);}
+            if(sortedmenupars[i].endsWith('_left')){parname = 'Left '+parname.slice(0,-5);}
+            codeBlock+='<details><summary><span id="'+sortedmenupars[i]+'" class="cp par on">'+parname+'</span></summary>';
+            letindexneeded=menupars.indexOf(sortedmenupars[i]);
+            for (const element of menuparsvalues[letindexneeded]) {
+                codeBlock+='<p class="ch cp on">'+element+'</p>';
+            }
+            codeBlock+='</details>';
+        }
+        codeBlock+='</details>';
+        document.getElementById("switches-box").innerHTML = codeBlock;
+
+        document.querySelectorAll('details:not(.menu)').forEach((D,_,A)=>{D.ontoggle =_=>{ if(D.open) A.forEach(d =>{ if(d!=D) d.open=false })}
+        })
+
+        var clickp = document.querySelectorAll('.cp');
+        clickp.forEach((el) => {
+            el.addEventListener('click', function(e) {
+                e.preventDefault();
+                hl.removeAllMeshes();
+                document.getElementById('mesh-label').innerHTML = '';
+                let pstructures = el.parentNode.parentNode.children;
+                let vis = true;
+                let from = 'on';
+                let to = 'off';
+                if(el.classList.contains('par')) {
+                    if(el.classList.contains('on')) { el.classList.replace('on','off'); vis=false;}
+                    else{el.classList.replace('off','on'); from = 'off'; to = 'on';}
+                    for (let i = 1; i < pstructures.length; i++) {
+                        scene.meshes.forEach(function(childmesh) {
+                            if(childmesh.name === pstructures[i].innerHTML){
+                                childmesh.isVisible = vis;
+                                pstructures[i].classList.replace(from,to);
+                            }
+                        });}}
+                else{
+                    if(!el.classList.contains('hl') && el.classList.contains('on')){
+                        el.classList.add("hl");
+                        scene.meshes.forEach(function(childmesh) {
+                            if(childmesh.name === el.innerHTML){
+                                hl.addMesh(childmesh, BABYLON.Color3.Green());
+                            }});}
+                    else{
+                        el.classList.remove("hl");
+                        if(el.classList.contains('on')) { el.classList.replace('on','off'); vis=false;}
+                        else{el.classList.replace('off','on'); from = 'off'; to = 'on';}
+                        scene.meshes.forEach(function(childmesh) {
+                            if(childmesh.name === el.innerHTML){
+                                childmesh.isVisible = vis;
+                            }});
+                        let collectionmax = el.parentNode.children.length-1;
+                        let countoff = 0;
+                        pstructures= el.parentNode.children;
+                        for (let i = 1; i < pstructures.length; i++) { if(pstructures[i].classList.contains('off')){countoff++;}}
+                        if(countoff === collectionmax){ el.parentNode.firstChild.firstElementChild.classList.replace('on','off');}
+                        else{el.parentNode.firstChild.firstElementChild.classList.replace('off','on');}
+                    }}
+            });
+        });
+
+        scene.onPointerObservable.add(function(evt) {
+            let pickResult = scene.pick(scene.pointerX, scene.pointerY);
+            switch (evt.type) {
+                case BABYLON.PointerEventTypes.POINTERTAP:
+                    if (pickResult.pickedMesh != null) {
+                        if(hl.hasMesh(pickResult.pickedMesh)){hl.removeAllMeshes();document.getElementById('mesh-label').innerHTML = '';}
+                        else{
+                            hl.removeAllMeshes();
+                            for (const mesh of scene.meshes) {if(mesh.name === pickResult.pickedMesh.name){hl.addMesh(mesh, BABYLON.Color3.Green());
+                                let dot = pickResult.pickedMesh.name.charAt(pickResult.pickedMesh.name.length - 2);
+                                let reducedmeshname = pickResult.pickedMesh.name; let parentmeshname = getParent(pickResult.pickedMesh.name);
+                            if(dot === '.'){reducedmeshname = reducedmeshname.slice(0,-2); parentmeshname=parentmeshname.split("_").shift();}
+                                showLabel(reducedmeshname,parentmeshname);
+                            }}}}
+                    break;
+                case BABYLON.PointerEventTypes.POINTERDOUBLETAP:
+                    if (pickResult.pickedMesh != null) {
+                        document.getElementById('mesh-label').innerHTML = '';
+                        hl.removeAllMeshes();
+                        for (const mesh of scene.meshes) {if(mesh.name === pickResult.pickedMesh.name){mesh.isVisible = false;}}
+                        const myCollection = document.getElementsByTagName("p")
+                        for (let i = 0; i < myCollection.length; i++) {if(myCollection[i].innerHTML === pickResult.pickedMesh.name){myCollection[i].classList.replace('on','off');}}
+                        let parchilds = document.getElementById(getParent(pickResult.pickedMesh.name)).parentNode.parentNode.children,count = 0;
+                        for (let i = 0; i < parchilds.length; i++) {if(parchilds[i].classList.contains('ch') && parchilds[i].classList.contains('on')){count++}}
+                        if(count===0){document.getElementById(getParent(pickResult.pickedMesh.name)).classList.replace('on','off');}
+                        break;}}});
+
+        scene.onKeyboardObservable.add((kbInfo) => {
+            switch (kbInfo.type) {
+                case BABYLON.KeyboardEventTypes.KEYDOWN:
+                    switch (kbInfo.event.key) {
+                        case "+":  cam.radius -= 0.1; break;
+                        case "-":  cam.radius += 0.1; break;}
+                    break;}
+        });
+
+        function showLabel(struc,group){ document.getElementById('mesh-label').innerHTML = '<div class="mesh">' + struc + '</div>' + '<div class="layer">' + group + '</div>';}
+        function getParent(struc) { for (let i = 0; i < menuparsvalues.length; i++) { if (menuparsvalues[i].includes(struc)) {return menupars[i]}}}
+        engine.runRenderLoop(function(){scene.render();});
+
+
+        if (typeof subset !== 'undefined') { // vb demo.js : globalThis.subset : array met parent layers en dan structuren. layers : laag met alle substructuren ineens uitzetten (l-naam_layer). Indien paar structuren in uitgezette layer weer aan: eerst laag weer aanzetten(l+naam_layer). Daarna per substructuur zaken aan (++structuur) of uit (--structuur)
+            subset.forEach(item => {let check = item.charAt(0);
+                if(check==='l'){
+                    if(item.charAt(1) ==='-'){
+                        window.document.getElementById(item.slice(2)).click();}
+                    if(item.charAt(1) ==='+'){window.document.getElementById(item.slice(2)).className = 'cp par on';}}
+               else{ for (const element of document.getElementsByClassName('ch cp')) {
+                        if(item.charAt(1) ==='+'){if (item.slice(2) === element.innerHTML){element.click();}}
+                        else if(item.charAt(1) ==='-'){if (item.slice(2) === element.innerHTML){scene.getMeshByName(element.innerHTML).isVisible = false;element.className = 'ch cp off';}}
+                    }}
+            });}
+        if(typeof menuoff !== 'undefined' && menuoff === true){window.document.getElementById('switches-box').style.display = 'none';} //in preset file bv. demo.js: globalThis.menuoff = true; optioneel : dat verbergt menu interface! Normaal menu optie aanzetten : globalThis.menuoff = false;
+    });
+
+    mod.onclick = function() {mpopup.style.display = "none";};
+    close.onclick = function() {mpopup.style.display = "none";};
+    document.getElementById('info').addEventListener('click', function (e) { e.preventDefault();mpopup.style.display = "block";});
+    document.getElementById('home').addEventListener('click', function (e) { e.preventDefault(); window.location.reload();});
+    window.onclick = function(event) {if (event.target === mpopup) { mpopup.style.display = "none";}};
+    window.addEventListener("resize", function () {engine.resize();});
+    document.getElementById('fullscreen').addEventListener('click', function (e) { e.preventDefault(); toggleFullScreen(document.body);});
+    document.getElementById('listing').addEventListener('click', function (e) { e.preventDefault(); exportListing();});
+
+    function loadScript(file) {
+        const newScript = document.createElement('script');
+        newScript.setAttribute('src', file);
+        newScript.setAttribute('type', 'text/javascript');
+        newScript.setAttribute('async', 'true');
+        newScript.onload = () => console.log(`${file} loaded successfully.`);
+        newScript.onerror = () => console.error(`Error loading script: ${file}`);
+        document.head.appendChild(newScript);
+    }
+
+    function toggleFullScreen(elem) {
+        if ((document.fullScreenElement !== undefined && document.fullScreenElement === null) || (document.msFullscreenElement !== undefined && document.msFullscreenElement === null) || (document.mozFullScreen !== undefined && !document.mozFullScreen) || (document.webkitIsFullScreen !== undefined && !document.webkitIsFullScreen)) {
+            if (elem.requestFullScreen) { elem.requestFullScreen();}
+            else if (elem.mozRequestFullScreen) {elem.mozRequestFullScreen();}
+            else if (elem.webkitRequestFullScreen) {elem.webkitRequestFullScreen(Element.ALLOW_KEYBOARD_INPUT);}
+            else if (elem.msRequestFullscreen) {elem.msRequestFullscreen();}}
+        else {if (document.cancelFullScreen) {document.cancelFullScreen();}
+        else if (document.mozCancelFullScreen) {document.mozCancelFullScreen();}
+        else if (document.webkitCancelFullScreen) {document.webkitCancelFullScreen();}
+        else if (document.msExitFullscreen) {document.msExitFullscreen();}}}
+
+    function exportListing() {let exportstring = '';
+        for (const element of document.getElementsByClassName('ch cp on')) {exportstring = exportstring + element.parentElement.firstChild.textContent.concat('#',element.innerHTML)+'\n';}
+        navigator.clipboard.writeText(exportstring).then(() => {
+            prompt("We have copied the active structures list to your clipboard. Please try to paste it somewhere or copy the selected data from below:", exportstring);
+        }).catch(err => {
+            prompt("Failed to copy text to clipboard! Please copy and paste the selected data from below:", exportstring);
+        });}
+</script>
+</body>
+</html>
