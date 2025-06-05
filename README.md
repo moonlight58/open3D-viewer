@@ -1,2 +1,2 @@
 # open3dviewer
-LUMC open 3D webviewer for .glb files
+Open 3D webviewer for .glb files, developed at the Leiden University Medical Center (LUMC). 
