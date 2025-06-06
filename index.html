@@ -253,7 +253,11 @@
         else if (document.msExitFullscreen) {document.msExitFullscreen();}}}
 
     function exportListing() {let exportstring = '';
-        for (const element of document.getElementsByClassName('ch cp on')) {exportstring = exportstring + element.parentElement.firstChild.textContent.concat('#',element.innerHTML)+'\n';}
+        for (const element of document.getElementsByClassName('ch cp on')) {
+            let parentname = element.parentElement.firstChild.textContent;
+            if(parentname.startsWith("Left ")){parentname = parentname.substring(5);parentname=parentname.concat('_left');}
+            if(parentname.startsWith("Right ")){parentname = parentname.substring(6);parentname=parentname.concat('_right');}
+            exportstring = exportstring + parentname.concat('#',element.innerHTML)+'\n';}
         navigator.clipboard.writeText(exportstring).then(() => {
             prompt("We have copied the active structures list to your clipboard. Please try to paste it somewhere or copy the selected data from below:", exportstring);
         }).catch(err => {
