@@ -76,10 +76,10 @@
     scene.executeWhenReady(function () {
         scene.createDefaultCamera(true, true, true);
         var cam = scene.activeCamera; cam.wheelPrecision = 600; cam.pinchPrecision = 800; cam.alpha += Math.PI;cam.panningSensibility = 1600; cam.useAutoRotationBehavior = false;
-        var helper = scene.createDefaultEnvironment(); helper.ground.dispose(); helper.skybox.dispose();
+        var helper = scene.createDefaultEnvironment(); helper.ground.dispose(); helper.skybox.dispose(); scene.environmentIntensity = 1.6;
         scene.skipPointerMovePicking = true; scene.pointerUpPredicate = ()=> false; scene.pointerDownPredicate = ()=> false; scene.pointerMovePredicate = ()=> false;
         document.getElementById('rotation').addEventListener('click', function (e) { e.preventDefault(); cam.useAutoRotationBehavior = !cam.useAutoRotationBehavior;cam.autoRotationBehavior.idleRotationSpeed = -0.4;});
-        if(model.split("_")[0] === 'overview'){
+        if(model.split("-")[0] === 'overview'){
             scene.transformNodes.forEach((el) => {
                 if (el.name.endsWith('_right')){ //transform_menu_parent has right_ name at the end!
                 let clonedparentname = el.name.replace("_right", "_left");
