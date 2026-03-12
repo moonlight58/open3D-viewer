@@ -33,7 +33,7 @@ This will start a local webserver at `http://localhost:8000/`. You can then acce
 But if you need to test it in a VR Headset, you'll need an https url. You can use ngrok to create a tunnel of your localhost port to a valid https url. Because most of the VR Headset only use https for security
 
 > [!IMPORTANT]
-To use ngrok but you'll an account. No purchase are needed only the free account is enough to test this app.
+To use ngrok you'll an account. No purchase are needed only the free account is enough to test this app.
 ```bash
 ngrok http 8000
 ```
