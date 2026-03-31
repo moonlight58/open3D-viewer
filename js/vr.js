@@ -340,17 +340,17 @@ function initVR(xrHelper) {
 
     var VR_HELP_ROWS = [
         { text: '══════  AIDE VR  ══════',              color: '#93c5fd', h: 32, fs: 20 },
-        { text: '',                                     color: '',        h: 6,  fs: 1  },
+        { text: '',                                     color: '',          h: 6,  fs: 1  },
         { text: '🎮  MANETTE DROITE',                   color: '#fbbf24', h: 28, fs: 19 },
         { text: '  Gâchette      -  Saisir & déplacer', color: '#e5e7eb', h: 24, fs: 16 },
         { text: '  Joystick ↑↓   -  Pousser / tirer',   color: '#e5e7eb', h: 24, fs: 16 },
-        { text: '  Joystick ←→   -  Rotation Y',        color: '#e5e7eb', h: 24, fs: 16 },
+        { text: '  Joystick ←→  -  Rotation Y',         color: '#e5e7eb', h: 24, fs: 16 },
         { text: '  Grip          -  Agrandir',          color: '#e5e7eb', h: 24, fs: 16 },
-        { text: '',                                     color: '',        h: 6,  fs: 1  },
+        { text: '',                                     color: '',          h: 6,  fs: 1  },
         { text: '🎮  MANETTE GAUCHE',                   color: '#fbbf24', h: 28, fs: 19 },
         { text: '  Grip          -  Rétrécir',          color: '#e5e7eb', h: 24, fs: 16 },
         { text: '  Menu radial   -  Actions',           color: '#e5e7eb', h: 24, fs: 16 },
-        { text: '',                                     color: '',        h: 6,  fs: 1  },
+        { text: '',                                     color: '',          h: 6,  fs: 1  },
         { text: '  Bouton Info pour fermer',            color: '#93c5fd', h: 24, fs: 15 }
     ];
 
@@ -358,7 +358,7 @@ function initVR(xrHelper) {
         if (vrInfoPanel) { vrInfoPanel.dispose(); vrInfoPanel = null; return; }
 
         vrInfoPanel = BABYLON.MeshBuilder.CreatePlane('vrInfoPanel',
-            { width: 0.55, height: 0.40, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, scene);
+            { width: 0.35, height: 0.40, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, scene);
         vrInfoPanel.isPickable = false;
 
         if (leftGripMesh) {
@@ -379,8 +379,7 @@ function initVR(xrHelper) {
         tex.addControl(border);
 
         var stack = new BABYLON.GUI.StackPanel();
-        stack.isVertical = true;
-        stack.paddingTop = '10px'; stack.paddingLeft = '18px';
+        stack.paddingLeft = '18px';
         tex.addControl(stack);
 
         VR_HELP_ROWS.forEach(function(row) {
@@ -424,13 +423,48 @@ function initVR(xrHelper) {
     }
 
     function disposeMeshListPanel() {
+        stopMeshListFollow();
         if (vrMeshListPanel) { vrMeshListPanel.dispose(); vrMeshListPanel = null; }
     }
 
+    var meshListFollowObserver = null;
+
+    function startMeshListFollow() {
+        stopMeshListFollow();
+        meshListFollowObserver = scene.onBeforeRenderObservable.add(function() {
+            if (!vrMeshListPanel || !leftGripMesh) return;
+            leftGripMesh.computeWorldMatrix(true);
+            var gripWorld = leftGripMesh.getWorldMatrix();
+            vrMeshListPanel.position = BABYLON.Vector3.TransformCoordinates(
+                new BABYLON.Vector3(0, 0.48, 0), gripWorld);
+
+            var srcQ = leftGripMesh.absoluteRotationQuaternion
+                    || leftGripMesh.rotationQuaternion;
+            if (srcQ) {
+                if (!vrMeshListPanel.rotationQuaternion)
+                    vrMeshListPanel.rotationQuaternion = new BABYLON.Quaternion();
+                srcQ.copyTo(vrMeshListPanel.rotationQuaternion);
+            }
+            vrMeshListPanel.computeWorldMatrix(true);
+        });
+    }
+
+    function stopMeshListFollow() {
+        if (meshListFollowObserver) {
+            scene.onBeforeRenderObservable.remove(meshListFollowObserver);
+            meshListFollowObserver = null;
+        }
+    }
+
     function toggleMeshListPanel() {
-        if (vrMeshListPanel) { disposeMeshListPanel(); return; }
-        meshListPage = 0;
-        buildMeshListPanel();
+        // note: keeps crashing, still investigating
+        // try {
+        //     if (vrMeshListPanel) { disposeMeshListPanel(); return; }
+        //     meshListPage = 0;
+        //     buildMeshListPanel();
+        // } catch(e) {
+        //     alert('Crash: ' + e.message + '\n' + e.stack);
+        // }
     }
 
     function buildMeshListPanel() {
@@ -451,14 +485,16 @@ function initVR(xrHelper) {
 
         vrMeshListPanel = BABYLON.MeshBuilder.CreatePlane('vrMeshListPanel',
             { width: PANEL_W, height: PANEL_H, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, scene);
+        // No parent — world position is tracked each frame by startMeshListFollow()
         if (leftGripMesh) {
-            vrMeshListPanel.parent   = leftGripMesh;
-            vrMeshListPanel.position = new BABYLON.Vector3(0, 0.48, 0);
-            vrMeshListPanel.rotation = new BABYLON.Vector3(Math.PI / 2 - 0.3, 0, Math.PI);
+            leftGripMesh.computeWorldMatrix(true);
+            vrMeshListPanel.position = BABYLON.Vector3.TransformCoordinates(
+                new BABYLON.Vector3(0, 0.48, 0), leftGripMesh.getWorldMatrix());
         } else {
             vrMeshListPanel.position = new BABYLON.Vector3(0, 1.5, 0.8);
         }
         vrMeshListPanel.isPickable = true;
+        startMeshListFollow();
 
         var tex = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(vrMeshListPanel, PW, PH);
         tex.background = '#0f172af4';
