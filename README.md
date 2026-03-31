@@ -1,39 +1,75 @@
-# open3dviewer
-Open 3D webviewer for .glb files, developed at the Anatomy department of the Leiden University Medical Center (LUMC). This open 3D webviewer code is provided “as is” under a GPL 3.0 license, see the basic user input below.
 
-Tutorials about further options, viewer hosting, useful links and preparing webmodels: https://caskanatomy.info/open3dviewertutorials
 
-Information about our open 3D anatomy model: https://anatomytool.org/open3dmodel
+# Salle d'Immersion 3D Viewer
+> [!NOTE]
+> Ce projet est un fork du travail original de Djansma : [github.com/djansma/open3dviewer](https://github.com/djansma/open3dviewer)
 
-3D Model (.glb) on a webserver can be viewed interactively within this viewer using a regular webbrowser like Chrome, Edge or Firefox etc. Pressing arrows on the keyboard with focus on the viewport can make the model turn. Pressing + or - will zoom the model in or out. You can also turn structures on or off individually or in groups in the top menu.  
+Visualiseur web 3D pour fichiers .glb, développé par l'équipe **Animation Numérique et Innovante & Low-Tech (ANI & Low-Tech)**, en partenariat avec le **Learning Centre Claude Oytana** (Besançon, France).
 
-Touch device input: Drag to rotate |  Drag two fingers to pan | Tap to select |  Pinch to zoom in or out
-Mouse input: Left-click and drag to rotate | Scroll-wheel to zoom in or out | Right-click and drag to pan | Left-click to select, Double-click to hide
+## Présentation du projet
 
-The folder open3dviewer with the viewer code can be downloaded and hosted from a webserver. Calls should normally look similar like this for loading just a basic model:  https://caskanatomy.info/open3dviewer/?model=overview_demo  
-You might also want to create an optional subset file for a model to show less structures at the start, which would look similar like this: https://caskanatomy.info/open3dviewer/?model=overview_demo&subset=lessbonesnomuscle
-You might want to export selected parent and structure-names in the viewer for easier model (re)building and exporting from Blender. That option can be tuned on with an optional parameter: https://caskanatomy.info/open3dviewer/?model=overview_demo&subset=lessbonesnomuscle&export=on
-The optional URL-parameters can be in different order. 
-A special use-case is a specially made model which will auto-clone certain right structures to left structures inside the viewer. 
+Ce projet a été créé pour rendre la "Salle d'Immersion" plus ludique et interactive, suite aux demandes des enseignants et chercheurs. L'objectif est de fournir une application web compatible VR pour visualiser et manipuler des objets 3D à des fins pédagogiques et de recherche.
 
-More about all these things can be found at https://caskanatomy.info/open3dviewertutorials
+## Fonctionnalités
 
-More info about our open 3D anatomy model can be found at: https://anatomytool.org/open3dmodel
+- Visualisation et interaction avec des modèles 3D (.glb) directement dans le navigateur (Chrome, Edge, Firefox, etc.)
+- Support VR pour une expérience immersive
+- Contrôles clavier et souris pour la navigation
+- Contrôles tactiles pour les appareils mobiles
+- Activation/désactivation des structures individuellement ou en groupe
 
-## Launch the project
+## Contrôles
 
-To launch the project, you can use a simple webserver. If you have Python installed, you can run the following command in the terminal from the directory where the open3dviewer folder is located:
+**Appareils tactiles :**
+- Glisser pour faire pivoter
+- Glisser à deux doigts pour déplacer (pan)
+- Taper pour sélectionner
+- Pincer pour zoomer
 
-```bash
-python -m http.server 8000
+**Souris/Clavier :**
+- Clic gauche et glisser pour faire pivoter
+- Molette pour zoomer
+- Clic droit et glisser pour déplacer (pan)
+- Clic gauche pour sélectionner, double-clic pour masquer
+- Flèches du clavier pour tourner
+- \+ / - pour zoomer
+
+## Utilisation
+
+Téléchargez ou clonez le dossier `open3dviewer` et hébergez-le sur un serveur web. Pour charger un modèle, utilisez une URL comme :
+
+```
+http://localhost:8000/?model=overview-demo
 ```
 
-This will start a local webserver at `http://localhost:8000/`. You can then access the viewer by navigating to `http://localhost:8000/?model=overview-demo` in your web browser.
+Vous pouvez aussi utiliser des paramètres d'URL optionnels :
+- `subset` pour afficher un sous-ensemble de structures au démarrage : `?model=overview-demo&subset=lessbonesnomuscle`
+- `export=on` pour exporter les noms des parents et structures sélectionnés (pratique pour Blender) : `?model=overview-demo&subset=lessbonesnomuscle&export=on`
 
-But if you need to test it in a VR Headset, you'll need an https url. You can use ngrok to create a tunnel of your localhost port to a valid https url. Because most of the VR Headset only use https for security
+L'ordre des paramètres n'a pas d'importance. Certains modèles spéciaux peuvent cloner automatiquement certaines structures de droite à gauche dans le visualiseur.
 
-> [!IMPORTANT]
-To use ngrok you'll an account. No purchase are needed only the free account is enough to test this app.
+## Lancer le projet
+
+Vous pouvez utiliser un serveur web simple. Si Python est installé, lancez cette commande dans le dossier du projet :
+
+```bash
+python3 -m http.server 8000
+```
+
+Puis ouvrez votre navigateur à l'adresse `http://localhost:8000/?model=overview-demo`.
+
+### VR/HTTPS
+
+Pour utiliser le visualiseur dans un casque VR, une URL HTTPS est nécessaire. Utilisez [ngrok](https://ngrok.com/) pour créer un tunnel sécurisé vers votre localhost (un compte gratuit suffit) :
+
 ```bash
 ngrok http 8000
 ```
+
+## Crédits
+
+- Développé par : [Gaël Röthlin](https://github.com/moonlight58), Stagiaire à Animation Numérique et Innovante & Low-Tech (ANI & Low-Tech)
+- En partenariat avec : Learning Centre Claude Oytana, Besançon, France
+- Fork du projet original de Djansma : [github.com/djansma/open3dviewer](https://github.com/djansma/open3dviewer)
+
+Ce projet est fourni "en l'état" sous licence GPL 3.0.
