@@ -28,7 +28,7 @@ To launch the project, you can use a simple webserver. If you have Python instal
 python -m http.server 8000
 ```
 
-This will start a local webserver at `http://localhost:8000/`. You can then access the viewer by navigating to `http://localhost:8000/open3dviewer/?model=overview_demo` in your web browser.
+This will start a local webserver at `http://localhost:8000/`. You can then access the viewer by navigating to `http://localhost:8000/?model=overview-demo` in your web browser.
 
 But if you need to test it in a VR Headset, you'll need an https url. You can use ngrok to create a tunnel of your localhost port to a valid https url. Because most of the VR Headset only use https for security
 
@@ -37,6 +37,3 @@ To use ngrok you'll an account. No purchase are needed only the free account is 
 ```bash
 ngrok http 8000
 ```
-
-
-

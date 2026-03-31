@@ -334,23 +334,22 @@ function initVR(xrHelper) {
     var vrInfoPanel = null;
 
     var VR_HELP_ROWS = [
-        { text: '══════  AIDE VR  ══════',            color: '#93c5fd', h: 32, fs: 20 },
-        { text: '',                                    color: '',        h: 6,  fs: 1  },
-        { text: '🎮  MANETTE DROITE',                 color: '#fbbf24', h: 28, fs: 19 },
-        { text: '  Gâchette      →  Saisir & déplacer', color: '#e5e7eb', h: 24, fs: 16 },
-        { text: '  Joystick ↑↓  →  Pousser / tirer',   color: '#e5e7eb', h: 24, fs: 16 },
-        { text: '  Joystick ←→  →  Rotation Y',         color: '#e5e7eb', h: 24, fs: 16 },
-        { text: '  Grip          →  Agrandir',           color: '#e5e7eb', h: 24, fs: 16 },
-        { text: '',                                    color: '',        h: 6,  fs: 1  },
-        { text: '🎮  MANETTE GAUCHE',                 color: '#fbbf24', h: 28, fs: 19 },
-        { text: '  Grip          →  Rétrécir',           color: '#e5e7eb', h: 24, fs: 16 },
-        { text: '  Menu radial   →  Actions',            color: '#e5e7eb', h: 24, fs: 16 },
-        { text: '',                                    color: '',        h: 6,  fs: 1  },
+        { text: '══════  AIDE VR  ══════',              color: '#93c5fd', h: 32, fs: 20 },
+        { text: '',                                     color: '',        h: 6,  fs: 1  },
+        { text: '🎮  MANETTE DROITE',                   color: '#fbbf24', h: 28, fs: 19 },
+        { text: '  Gâchette      -  Saisir & déplacer', color: '#e5e7eb', h: 24, fs: 16 },
+        { text: '  Joystick ↑↓   -  Pousser / tirer',   color: '#e5e7eb', h: 24, fs: 16 },
+        { text: '  Joystick ←→   -  Rotation Y',        color: '#e5e7eb', h: 24, fs: 16 },
+        { text: '  Grip          -  Agrandir',          color: '#e5e7eb', h: 24, fs: 16 },
+        { text: '',                                     color: '',        h: 6,  fs: 1  },
+        { text: '🎮  MANETTE GAUCHE',                   color: '#fbbf24', h: 28, fs: 19 },
+        { text: '  Grip          -  Rétrécir',          color: '#e5e7eb', h: 24, fs: 16 },
+        { text: '  Menu radial   -  Actions',           color: '#e5e7eb', h: 24, fs: 16 },
+        { text: '',                                     color: '',        h: 6,  fs: 1  },
         { text: '  Bouton Info pour fermer',            color: '#93c5fd', h: 24, fs: 15 }
     ];
 
     function toggleVRInfoPanel() {
-        console.log('[VR] Info button pressed');
         if (vrInfoPanel) { vrInfoPanel.dispose(); vrInfoPanel = null; return; }
 
         vrInfoPanel = BABYLON.MeshBuilder.CreatePlane('vrInfoPanel',
@@ -641,8 +640,11 @@ function initVR(xrHelper) {
     // ══════════════════════════════════════════════════════════════════════════
     var BTN_DEFS = [
         {
-            label : ' Info',
-            action: function() { toggleVRInfoPanel(); }
+            label : ' Info',
+            action: function() { 
+                console.log('Info button action triggered');
+            //    toggleVRInfoPanel();
+            }
         },
         {
             label : '⟳ Rafraîchir',
@@ -660,7 +662,10 @@ function initVR(xrHelper) {
         },
         {
             label : ' Menu',
-            action: function() { toggleMeshListPanel(); }
+            action: function() { 
+                console.log('Menu button action triggered');
+            //    toggleMeshListPanel();
+            }
         }
     ];
 
