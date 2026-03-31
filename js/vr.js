@@ -64,12 +64,6 @@ function initVR(xrHelper) {
         });
     } catch (e) { console.warn('Pointer selection unavailable:', e); }
 
-    // ── FIX 2 : remonte la hiérarchie parent pour détecter un mesh VR UI ─────
-    // HolographicButton crée des sous-meshes auto-nommés qui passent isModelMesh.
-    // En remontant jusqu'à trouver un nœud VR connu (vrRootNode, vrBtn_*, etc.)
-    // on exclut correctement tous les meshes de l'UI du grab.
-    // Note : vrRootNode est une var locale déclarée plus bas dans initVR — cette
-    // fonction est une closure qui y a accès.
     function isVRUIMesh(mesh) {
         var node = mesh;
         while (node) {
@@ -103,10 +97,6 @@ function initVR(xrHelper) {
     var grabRotationInv   = null;
     var grabPivotRotation = null;
 
-    // FIX 1 : référence directe au composant thumbstick, cachée une fois à
-    // l'initialisation. Le polling de .axes sur une référence directe est fiable
-    // sur tous les profils (Quest 2/3/Pro, Pico…), contrairement à
-    // getComponentOfType() appelé chaque frame ou aux observables d'axes.
     var rightThumbComponent = null;
 
     var rightHUDPlane = null;
@@ -192,7 +182,6 @@ function initVR(xrHelper) {
             }
 
             if (!rightGrabbed) {
-                // Hover : FIX 2 — isGrabbableMesh exclut tous les meshes VR UI
                 var hit = scene.pickWithRay(ray, function(m) { return isGrabbableMesh(m); });
                 rayCursorMesh.isVisible = !!(hit && hit.hit);
                 if (hit && hit.hit) rayCursorMesh.position = hit.pickedPoint;
@@ -217,7 +206,6 @@ function initVR(xrHelper) {
                 pivot.position = rayTip;
             }
 
-            // FIX 1 : poll direct sur la référence cachée — simple et fiable
             var tx = 0, ty = 0;
             if (rightThumbComponent && rightThumbComponent.axes) {
                 tx = rightThumbComponent.axes.x || 0;
@@ -265,8 +253,6 @@ function initVR(xrHelper) {
             if (motionController.handness !== 'right') return;
             rightController = controller;
 
-            // FIX 1 : cherche et cache le composant thumbstick ─────────────────
-            // Itère sur tous les composants car l'ID varie selon le profil casque.
             var thumbComp = null;
             if (motionController.components) {
                 var ids = Object.keys(motionController.components);
@@ -300,8 +286,6 @@ function initVR(xrHelper) {
                     var pressed = comp.pressed || (comp.value !== undefined && comp.value > 0.5);
 
                     if (pressed && !rightGrabbed) {
-                        // FIX 2 : grab uniquement si le curseur est visible
-                        // sur un mesh du modèle (pas sur l'UI VR)
                         if (!rayCursorMesh.isVisible) return;
                         var ray = getRightRay();
                         if (!ray) return;
@@ -379,7 +363,7 @@ function initVR(xrHelper) {
 
         if (leftGripMesh) {
             vrInfoPanel.parent   = leftGripMesh;
-            vrInfoPanel.position = new BABYLON.Vector3(0, 0.52, 0);
+            vrInfoPanel.position = new BABYLON.Vector3(0, 0, -0.2);
             vrInfoPanel.rotation = new BABYLON.Vector3(Math.PI / 2 - 0.3, 0, Math.PI);
         } else {
             vrInfoPanel.position = new BABYLON.Vector3(0, 1.5, 0.8);
