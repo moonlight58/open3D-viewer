@@ -216,15 +216,12 @@ function initVR(xrHelper) {
             var dominated = Math.abs(tx) > Math.abs(ty) ? 'x' : 'y';
 
             if (dominated === 'y' && Math.abs(ty) > DEAD) {
-                grabDistance = Math.max(0.1, Math.min(10, grabDistance - ty * 0.02));
-                var nowQ = getControllerQuaternion();
-                if (nowQ && pivot.rotationQuaternion) {
-                    grabRotationInv   = BABYLON.Quaternion.Inverse(nowQ);
-                    grabPivotRotation = pivot.rotationQuaternion.clone();
-                    grabOffsetWorld   = pivot.position.subtract(
-                        ray.origin.add(ray.direction.scale(grabDistance))
-                    );
-                }
+                // Adjust grabDistance (multiplied by a slightly higher factor for better feel)
+                grabDistance = Math.max(0.1, Math.min(10, grabDistance - ty * 0.05));
+                
+                // Note: We intentionally do NOT recalculate grabRotationInv or grabOffsetWorld here. 
+                // Leaving them alone allows the previously calculated offset to apply to the newly extended distance!
+                
                 updateHUD('↕ ' + grabDistance.toFixed(2) + ' m');
 
             } else if (dominated === 'x' && Math.abs(tx) > DEAD) {
@@ -422,9 +419,14 @@ function initVR(xrHelper) {
         }
     }
 
+    // Tracks which parent folders are open in the VR menu
+    var expandedCategories = {};
+
     function disposeMeshListPanel() {
-        stopMeshListFollow();
-        if (vrMeshListPanel) { vrMeshListPanel.dispose(); vrMeshListPanel = null; }
+        if (vrMeshListPanel) { 
+            vrMeshListPanel.dispose(); 
+            vrMeshListPanel = null; 
+        }
     }
 
     var meshListFollowObserver = null;
@@ -457,195 +459,143 @@ function initVR(xrHelper) {
     }
 
     function toggleMeshListPanel() {
-        // note: keeps crashing, still investigating
-        // try {
-        //     if (vrMeshListPanel) { disposeMeshListPanel(); return; }
-        //     meshListPage = 0;
-        //     buildMeshListPanel();
-        // } catch(e) {
-        //     alert('Crash: ' + e.message + '\n' + e.stack);
-        // }
+        // Close the Info panel if it's currently open
+        if (vrInfoPanel) { 
+            vrInfoPanel.dispose(); 
+            vrInfoPanel = null; 
+        }
+
+        if (vrMeshListPanel) { 
+            disposeMeshListPanel(); 
+            return; 
+        }
+        buildMeshListPanel();
     }
 
     function buildMeshListPanel() {
         disposeMeshListPanel();
 
-        var allNames   = getModelMeshNames();
-        var totalPages = Math.max(1, Math.ceil(allNames.length / MESHES_PER_PAGE));
-        meshListPage   = Math.max(0, Math.min(meshListPage, totalPages - 1));
-        var pageNames  = allNames.slice(
-            meshListPage * MESHES_PER_PAGE,
-            meshListPage * MESHES_PER_PAGE + MESHES_PER_PAGE
-        );
-
-        var PW = 860, PH = 680;
-        var PANEL_W = 0.86, PANEL_H = 0.68;
-        var HDR_H = 56, FOOT_H = 62;
-        var ROW_H = Math.floor((PH - HDR_H - FOOT_H) / MESHES_PER_PAGE);
-
+        // 1. Create the Panel and parent it directly to the left controller
         vrMeshListPanel = BABYLON.MeshBuilder.CreatePlane('vrMeshListPanel',
-            { width: PANEL_W, height: PANEL_H, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, scene);
-        // No parent — world position is tracked each frame by startMeshListFollow()
+            { width: 0.7, height: 0.8, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, scene);
+        
         if (leftGripMesh) {
-            leftGripMesh.computeWorldMatrix(true);
-            vrMeshListPanel.position = BABYLON.Vector3.TransformCoordinates(
-                new BABYLON.Vector3(0, 0.48, 0), leftGripMesh.getWorldMatrix());
+            vrMeshListPanel.parent = leftGripMesh;
+            vrMeshListPanel.position = new BABYLON.Vector3(0.5, 0.2, -0.1); // Floats to the right of the left hand
+            vrMeshListPanel.rotation = new BABYLON.Vector3(0, Math.PI / 4, 0); // Angled slightly toward the user
         } else {
             vrMeshListPanel.position = new BABYLON.Vector3(0, 1.5, 0.8);
         }
-        vrMeshListPanel.isPickable = true;
-        startMeshListFollow();
 
-        var tex = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(vrMeshListPanel, PW, PH);
+        var tex = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(vrMeshListPanel, 700, 800);
         tex.background = '#0f172af4';
 
-        var border = new BABYLON.GUI.Rectangle();
-        border.width = '100%'; border.height = '100%';
-        border.color = '#3b82f6'; border.thickness = 4;
-        border.cornerRadius = 12; border.background = 'transparent';
-        tex.addControl(border);
+        // 2. Setup the Scroll Viewer for the nested hierarchy
+        var sv = new BABYLON.GUI.ScrollViewer();
+        sv.width = "100%";
+        sv.height = "720px";
+        sv.top = "10px";
+        sv.thickness = 0;
+        tex.addControl(sv);
 
-        var hdr = new BABYLON.GUI.Rectangle();
-        hdr.width = '100%'; hdr.height = HDR_H + 'px';
-        hdr.background = '#1e3a5f'; hdr.color = 'transparent'; hdr.thickness = 0;
-        hdr.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-        tex.addControl(hdr);
+        var mainStack = new BABYLON.GUI.StackPanel();
+        mainStack.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+        sv.addControl(mainStack);
 
-        var hdrTxt = new BABYLON.GUI.TextBlock();
-        hdrTxt.text  = '  Structures — ' + allNames.length + ' total   (p.' + (meshListPage + 1) + '/' + totalPages + ')';
-        hdrTxt.color = '#bfdbfe'; hdrTxt.fontSize = 20;
-        hdrTxt.height = HDR_H + 'px';
-        hdrTxt.verticalAlignment   = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-        hdrTxt.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        hdrTxt.paddingLeft = '12px';
-        tex.addControl(hdrTxt);
-
-        var sep = new BABYLON.GUI.Rectangle();
-        sep.width = '100%'; sep.height = '2px';
-        sep.background = '#3b82f6'; sep.color = 'transparent'; sep.thickness = 0;
-        sep.top = HDR_H + 'px';
-        sep.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-        tex.addControl(sep);
-
-        var COL_NAME = -(PW / 2) + 14;
-        var BTN_W = 68, BTN_H = ROW_H - 10;
-        var COL_HL  = (PW / 2) - 3 * (BTN_W + 6) - BTN_W / 2 + 4;
-        var COL_ISO = COL_HL  + BTN_W + 6;
-        var COL_VIS = COL_ISO + BTN_W + 6;
-
-        pageNames.forEach(function(meshName, i) {
-            var rowTop = HDR_H + 2 + i * ROW_H;
-            var isVis = false, isHl = false;
-            scene.meshes.forEach(function(m) {
-                if (m.name !== meshName) return;
-                if (m.isVisible) isVis = true;
-                if (hl.hasMesh(m)) isHl = true;
+        // 3. Build the Hierarchy from cleanmenu
+        Object.keys(cleanmenu).sort().forEach(function(parentName) {
+            
+            // --- PARENT BUTTON ---
+            var parBtn = BABYLON.GUI.Button.CreateSimpleButton("par_" + parentName, (expandedCategories[parentName] ? "▼ " : "▶ ") + parentName);
+            parBtn.width = "100%";
+            parBtn.height = "60px";
+            parBtn.color = "white";
+            parBtn.fontSize = 24;
+            parBtn.background = "#1e3a5f";
+            parBtn.thickness = 1;
+            parBtn.onPointerUpObservable.add(function() {
+                expandedCategories[parentName] = !expandedCategories[parentName];
+                buildMeshListPanel(); // Rebuild to expand/collapse
             });
+            mainStack.addControl(parBtn);
 
-            var rowBg = new BABYLON.GUI.Rectangle();
-            rowBg.width = '100%'; rowBg.height = ROW_H + 'px';
-            rowBg.background = isHl ? '#14532d44' : (i % 2 === 0 ? '#1e293b55' : 'transparent');
-            rowBg.color = 'transparent'; rowBg.thickness = 0;
-            rowBg.top = rowTop + 'px';
-            rowBg.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-            tex.addControl(rowBg);
-
-            var display = meshName.length > 22 ? meshName.slice(0, 20) + '…' : meshName;
-            var nameTb  = new BABYLON.GUI.TextBlock();
-            nameTb.text      = (isVis ? '● ' : '○ ') + display;
-            nameTb.color     = isVis ? '#e2e8f0' : '#64748b';
-            nameTb.fontSize  = 16;
-            nameTb.width     = '500px';
-            nameTb.height    = ROW_H + 'px';
-            nameTb.top       = rowTop + 'px';
-            nameTb.left      = COL_NAME + 'px';
-            nameTb.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-            nameTb.verticalAlignment   = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-            nameTb.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-            nameTb.paddingLeft = '10px';
-            tex.addControl(nameTb);
-
-            var btnTop = rowTop + Math.floor((ROW_H - BTN_H) / 2);
-
-            function mkBtn(uid, label, bg, colX, action) {
-                var b = BABYLON.GUI.Button.CreateSimpleButton('mlb_' + uid + '_' + i, label);
-                b.width = BTN_W + 'px'; b.height = BTN_H + 'px';
-                b.fontSize = 20; b.color = '#fff';
-                b.background = bg; b.cornerRadius = 8;
-                b.top  = btnTop + 'px'; b.left = colX + 'px';
-                b.verticalAlignment   = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-                b.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-                b.onPointerUpObservable.add(function() { action(); });
-                tex.addControl(b);
-            }
-
-            mkBtn('hl', '🟢', isHl ? '#16a34a' : '#16a34a55', COL_HL, function() {
-                if (isHl) { hl.removeAllMeshes(); }
-                else {
-                    hl.removeAllMeshes();
+            // --- CHILD BUTTONS ---
+            if (expandedCategories[parentName]) {
+                cleanmenu[parentName].forEach(function(childName) {
+                    var isVis = false, isHl = false;
                     scene.meshes.forEach(function(m) {
-                        if (m.name === meshName) hl.addMesh(m, BABYLON.Color3.Green());
+                        if (m.name === childName) {
+                            if (m.isVisible) isVis = true;
+                            if (hl.hasMesh(m)) isHl = true;
+                        }
                     });
-                }
-                buildMeshListPanel();
-            });
 
-            mkBtn('iso', '👁', '#2563eb77', COL_ISO, function() {
-                scene.meshes.forEach(function(m) {
-                    if (!isModelMesh(m)) return;
-                    m.isVisible = (m.name === meshName);
+                    var childContainer = new BABYLON.GUI.StackPanel();
+                    childContainer.isVertical = false;
+                    childContainer.width = "100%";
+                    childContainer.height = "50px";
+
+                    // Child Name (Highlight Toggle)
+                    var nameBtn = BABYLON.GUI.Button.CreateSimpleButton("ch_" + childName, "   " + childName);
+                    nameBtn.width = "550px";
+                    nameBtn.height = "50px";
+                    nameBtn.fontSize = 20;
+                    nameBtn.color = isVis ? "#e2e8f0" : "#64748b";
+                    nameBtn.background = isHl ? "#14532d" : "#1e293b"; // Green if highlighted
+                    nameBtn.thickness = 1;
+                    nameBtn.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+                    nameBtn.onPointerUpObservable.add(function() {
+                        if (isHl) {
+                            hl.removeAllMeshes();
+                        } else {
+                            hl.removeAllMeshes();
+                            scene.meshes.forEach(function(m) {
+                                if (m.name === childName) {
+                                    hl.addMesh(m, BABYLON.Color3.Green());
+                                    m.isVisible = true; // Ensure visible when highlighting
+                                }
+                            });
+                        }
+                        syncHtmlMenu();
+                        buildMeshListPanel();
+                    });
+                    childContainer.addControl(nameBtn);
+
+                    // Child Visibility Toggle
+                    var visBtn = BABYLON.GUI.Button.CreateSimpleButton("vis_" + childName, isVis ? "👁" : "🚫");
+                    visBtn.width = "150px";
+                    visBtn.height = "50px";
+                    visBtn.fontSize = 22;
+                    visBtn.color = "white";
+                    visBtn.background = isVis ? "#05966966" : "#dc262666";
+                    visBtn.onPointerUpObservable.add(function() {
+                        var nv = !isVis;
+                        scene.meshes.forEach(function(m) {
+                            if (m.name === childName) {
+                                m.isVisible = nv;
+                                if (!nv) hl.removeMesh(m); // Remove highlight if hidden
+                            }
+                        });
+                        syncHtmlMenu();
+                        buildMeshListPanel();
+                    });
+                    childContainer.addControl(visBtn);
+
+                    mainStack.addControl(childContainer);
                 });
-                hl.removeAllMeshes();
-                scene.meshes.forEach(function(m) {
-                    if (m.name === meshName) hl.addMesh(m, BABYLON.Color3.Green());
-                });
-                syncHtmlMenu();
-                buildMeshListPanel();
-            });
-
-            mkBtn('vis', isVis ? '🚫' : '✅', isVis ? '#dc262666' : '#05966966', COL_VIS, function() {
-                var nv = !isVis;
-                scene.meshes.forEach(function(m) {
-                    if (m.name !== meshName) return;
-                    m.isVisible = nv;
-                    if (!nv) hl.removeMesh(m);
-                });
-                syncHtmlMenu();
-                buildMeshListPanel();
-            });
+            }
         });
 
-        var sep2 = new BABYLON.GUI.Rectangle();
-        sep2.width = '100%'; sep2.height = '2px';
-        sep2.background = '#334155'; sep2.color = 'transparent'; sep2.thickness = 0;
-        sep2.top = (PH - FOOT_H) + 'px';
-        sep2.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-        tex.addControl(sep2);
-
-        var footBtnTop = PH - FOOT_H + Math.floor((FOOT_H - 46) / 2);
-
-        function mkFoot(uid, label, bg, leftPx, action) {
-            var b = BABYLON.GUI.Button.CreateSimpleButton('mlf_' + uid, label);
-            b.width = '170px'; b.height = '46px';
-            b.color = '#e2e8f0'; b.fontSize = 17;
-            b.background = bg; b.cornerRadius = 9;
-            b.top  = footBtnTop + 'px'; b.left = leftPx + 'px';
-            b.verticalAlignment   = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-            b.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-            b.onPointerUpObservable.add(function() { action(); });
-            tex.addControl(b);
-        }
-
-        mkFoot('prev', '◀  Préc.', meshListPage > 0 ? '#334155' : '#1e293b', 20, function() {
-            if (meshListPage > 0) { meshListPage--; buildMeshListPanel(); }
-        });
-        mkFoot('close', '✕  Fermer', '#7f1d1d', Math.floor((PW - 170) / 2), function() {
-            disposeMeshListPanel();
-        });
-        mkFoot('next', 'Suiv.  ▶', (meshListPage + 1 < totalPages) ? '#334155' : '#1e293b',
-               PW - 170 - 20, function() {
-            if (meshListPage + 1 < totalPages) { meshListPage++; buildMeshListPanel(); }
-        });
+        // 4. Footer Close Button
+        var closeBtn = BABYLON.GUI.Button.CreateSimpleButton("closeMenu", "✕ Fermer le menu");
+        closeBtn.width = "100%";
+        closeBtn.height = "60px";
+        closeBtn.color = "white";
+        closeBtn.fontSize = 24;
+        closeBtn.background = "#7f1d1d";
+        closeBtn.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
+        closeBtn.onPointerUpObservable.add(disposeMeshListPanel);
+        tex.addControl(closeBtn);
     }
 
     // ── Bouton Menu conditionnel ──────────────────────────────────────────────
