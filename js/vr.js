@@ -352,7 +352,15 @@ function initVR(xrHelper) {
     ];
 
     function toggleVRInfoPanel() {
-        if (vrInfoPanel) { vrInfoPanel.dispose(); vrInfoPanel = null; return; }
+        if (vrMeshListPanel) {
+            disposeMeshListPanel();
+        }
+
+        if (vrInfoPanel) { 
+            vrInfoPanel.dispose(); 
+            vrInfoPanel = null; 
+            return; 
+        }
 
         vrInfoPanel = BABYLON.MeshBuilder.CreatePlane('vrInfoPanel',
             { width: 0.35, height: 0.40, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, scene);
@@ -482,8 +490,8 @@ function initVR(xrHelper) {
         if (leftGripMesh) {
             vrMeshListPanel.parent = leftGripMesh;
             vrMeshListPanel.position = new BABYLON.Vector3(0.5, 0.2, -0.1); // Floats to the right of the left hand
-            vrMeshListPanel.rotation = new BABYLON.Vector3(0, Math.PI / 4, 0); // Angled slightly toward the user
-        } else {
+            vrMeshListPanel.rotation = new BABYLON.Vector3(Math.PI / 2 - 0.3, 0, Math.PI); // Angled slightly toward the user
+        } else {                                           
             vrMeshListPanel.position = new BABYLON.Vector3(0, 1.5, 0.8);
         }
 
