@@ -173,9 +173,12 @@ scene.executeWhenReady(function() {
     engine.runRenderLoop(function() { scene.render(); });
 
     // Optimise pointer-move picking (Button3D handles its own picking internally)
-    scene.skipPointerMovePicking = true;
-    scene.pointerMovePredicate   = function() { return false; };
-
+    scene.skipPointerMovePicking = false;
+    scene.pointerMovePredicate = function(mesh) {
+        // Restrict scene raycasts to our UI panels to maintain high performance
+        return mesh.name === 'vrMeshListPanel' || mesh.name === 'vrInfoPanel';
+    };
+    
     // ── Desktop UI event listeners ────────────────────────────────────────────
     document.getElementById('rotation').addEventListener('click', function(e) {
         e.preventDefault();

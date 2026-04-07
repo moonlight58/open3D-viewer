@@ -133,6 +133,24 @@ function buildMenu() {
                          !model.endsWith('.splat');
 
         switch (evt.type) {
+            case BABYLON.PointerEventTypes.POINTERMOVE:
+                var pickResult = pointerInfo.pickInfo;
+                
+                // 1. On retire la surbrillance précédente (votre code existant)
+                hl.removeAllMeshes();
+
+                // 2. LA CORRECTION : On vérifie qu'on touche un objet ET que ce n'est PAS l'interface VR
+                if (pickResult.hit && pickResult.pickedMesh) {
+                    
+                    // Si le mesh fait partie de l'UI (vrMeshListPanel, etc.), on ignore la surbrillance !
+                    if (typeof isModelMesh === 'function' && !isModelMesh(pickResult.pickedMesh)) {
+                        return; // Laisse le GUI 2D gérer l'interaction en interne
+                    }
+
+                    // 3. Sinon, c'est un modèle anatomique normal, on le met en surbrillance (votre code existant)
+                    hl.addMesh(pickResult.pickedMesh, BABYLON.Color3.Green()); // ou la couleur que vous utilisez
+                }
+                break;
             case BABYLON.PointerEventTypes.POINTERTAP:
                 if (isGlbPick) {
                     if (hl.hasMesh(pickResult.pickedMesh)) {

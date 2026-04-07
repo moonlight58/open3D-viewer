@@ -487,9 +487,12 @@ function initVR(xrHelper) {
         vrMeshListPanel = BABYLON.MeshBuilder.CreatePlane('vrMeshListPanel',
             { width: 0.7, height: 0.8, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, scene);
         
+        // EXPLICITLY ALLOW XR LASER POINTER TO INTERSECT THIS MESH
+        vrMeshListPanel.isPickable = true;  
+
         if (leftGripMesh) {
             vrMeshListPanel.parent = leftGripMesh;
-            vrMeshListPanel.position = new BABYLON.Vector3(0.5, 0.2, -0.1); // Floats to the right of the left hand
+            vrMeshListPanel.position = new BABYLON.Vector3(0, -1, 0); // Floats to the right of the left hand
             vrMeshListPanel.rotation = new BABYLON.Vector3(Math.PI / 2 - 0.3, 0, Math.PI); // Angled slightly toward the user
         } else {                                           
             vrMeshListPanel.position = new BABYLON.Vector3(0, 1.5, 0.8);
