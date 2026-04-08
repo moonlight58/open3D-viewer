@@ -367,7 +367,7 @@ function initVR(xrHelper) {
 
         if (leftGripMesh) {
             vrInfoPanel.parent   = leftGripMesh;
-            vrInfoPanel.position = new BABYLON.Vector3(0, 0, -0.3);
+            vrInfoPanel.position = new BABYLON.Vector3(0, 0, -0.2);
             vrInfoPanel.rotation = new BABYLON.Vector3(Math.PI / 2 - 0.3, 0, Math.PI);
         } else {
             vrInfoPanel.position = new BABYLON.Vector3(0, 1.5, 0.8);
@@ -379,7 +379,7 @@ function initVR(xrHelper) {
         var border = new BABYLON.GUI.Rectangle();
         border.width = '100%'; border.height = '100%';
         border.color = '#3b82f6'; border.thickness = 4;
-        border.background = 'transparent';
+        border.cornerRadius = 14; border.background = 'transparent';
         tex.addControl(border);
 
         var stack = new BABYLON.GUI.StackPanel();
@@ -397,6 +397,7 @@ function initVR(xrHelper) {
             tb.resizeToFit = false;
             stack.addControl(tb);
         });
+        console.log('[VR] Info panel créé');
     }
 
     // ── Bouton Menu conditionnel ──────────────────────────────────────────────
