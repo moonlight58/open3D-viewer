@@ -15,7 +15,7 @@ var struclookup    = [];
 var menupars       = [];
 var menuparsvalues = [];
 var chopped        = '';
-var cleanmenu      = [];
+var cleanmenu      = {};
 var transformnodesar = [];
 var instructionsOn = false;
 var glb            = true;
@@ -178,7 +178,7 @@ scene.executeWhenReady(function() {
         // Restrict scene raycasts to our UI panels to maintain high performance
         return mesh.name === 'vrMeshListPanel' || mesh.name === 'vrInfoPanel';
     };
-    
+
     // ── Desktop UI event listeners ────────────────────────────────────────────
     document.getElementById('rotation').addEventListener('click', function(e) {
         e.preventDefault();

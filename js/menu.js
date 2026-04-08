@@ -134,8 +134,7 @@ function buildMenu() {
 
         switch (evt.type) {
             case BABYLON.PointerEventTypes.POINTERMOVE:
-                var pickResult = pointerInfo.pickInfo;
-                
+                var pickResult = evt.pickInfo;                
                 // 1. On retire la surbrillance précédente (votre code existant)
                 hl.removeAllMeshes();
 
