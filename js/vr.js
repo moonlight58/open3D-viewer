@@ -87,7 +87,6 @@ function initVR(xrHelper) {
     // RIGHT CONTROLLER
     // ══════════════════════════════════════════════════════════════════════════
     var rightController   = null;
-    var leftController    = null;
 
     var rightGrabbed      = false;
     var grabDistance      = 0;
@@ -401,214 +400,6 @@ function initVR(xrHelper) {
         console.log('[VR] Info panel créé');
     }
 
-    // ── Mesh list panel ───────────────────────────────────────────────────────
-    var vrMeshListPanel = null;
-    var meshListPage    = 0;
-    var MESHES_PER_PAGE = 7;
-
-    function getModelMeshNames() {
-        var seen = {}, names = [];
-        scene.meshes.forEach(function(m) {
-            if (isModelMesh(m) && m.name && !seen[m.name]) {
-                seen[m.name] = true;
-                names.push(m.name);
-            }
-        });
-        return names.sort();
-    }
-
-    function syncHtmlMenu() {
-        var ps = document.getElementsByTagName('p');
-        for (var i = 0; i < ps.length; i++) {
-            var el = ps[i];
-            var vis = false;
-            scene.meshes.forEach(function(m) { if (m.name === el.innerHTML && m.isVisible) vis = true; });
-            el.className = vis ? 'ch cp on' : 'ch cp off';
-        }
-    }
-
-    // Tracks which parent folders are open in the VR menu
-    var expandedCategories = {};
-
-    function disposeMeshListPanel() {
-        if (vrMeshListPanel) { 
-            vrMeshListPanel.dispose(); 
-            vrMeshListPanel = null; 
-        }
-    }
-
-    var meshListFollowObserver = null;
-
-    function startMeshListFollow() {
-        stopMeshListFollow();
-        meshListFollowObserver = scene.onBeforeRenderObservable.add(function() {
-            if (!vrMeshListPanel || !leftGripMesh) return;
-            leftGripMesh.computeWorldMatrix(true);
-            var gripWorld = leftGripMesh.getWorldMatrix();
-            vrMeshListPanel.position = BABYLON.Vector3.TransformCoordinates(
-                new BABYLON.Vector3(0, 0.48, 0), gripWorld);
-
-            var srcQ = leftGripMesh.absoluteRotationQuaternion
-                    || leftGripMesh.rotationQuaternion;
-            if (srcQ) {
-                if (!vrMeshListPanel.rotationQuaternion)
-                    vrMeshListPanel.rotationQuaternion = new BABYLON.Quaternion();
-                srcQ.copyTo(vrMeshListPanel.rotationQuaternion);
-            }
-            vrMeshListPanel.computeWorldMatrix(true);
-        });
-    }
-
-    function stopMeshListFollow() {
-        if (meshListFollowObserver) {
-            scene.onBeforeRenderObservable.remove(meshListFollowObserver);
-            meshListFollowObserver = null;
-        }
-    }
-
-    function toggleMeshListPanel() {
-        // Close the Info panel if it's currently open
-        if (vrInfoPanel) { 
-            vrInfoPanel.dispose(); 
-            vrInfoPanel = null; 
-        }
-
-        if (vrMeshListPanel) { 
-            disposeMeshListPanel(); 
-            return; 
-        }
-        buildMeshListPanel();
-    }
-
-    function buildMeshListPanel() {
-        disposeMeshListPanel();
-
-        // 1. Create the Panel and parent it directly to the left controller
-        vrMeshListPanel = BABYLON.MeshBuilder.CreatePlane('vrMeshListPanel',
-            { width: 0.7, height: 0.8, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, scene);
-        
-        // EXPLICITLY ALLOW XR LASER POINTER TO INTERSECT THIS MESH
-        vrMeshListPanel.isPickable = true;  
-
-        if (leftGripMesh) {
-            vrMeshListPanel.parent = leftGripMesh;
-            vrMeshListPanel.position = new BABYLON.Vector3(0, -1, 0); // Floats to the right of the left hand
-            vrMeshListPanel.rotation = new BABYLON.Vector3(Math.PI / 2 - 0.3, 0, Math.PI); // Angled slightly toward the user
-        } else {                                           
-            vrMeshListPanel.position = new BABYLON.Vector3(0, 1.5, 0.8);
-        }
-
-        var tex = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(vrMeshListPanel, 700, 800);
-        tex.background = '#0f172af4';
-
-        // 2. Setup the Scroll Viewer for the nested hierarchy
-        var sv = new BABYLON.GUI.ScrollViewer();
-        sv.width = "100%";
-        sv.height = "720px";
-        sv.top = "10px";
-        sv.thickness = 0;
-        tex.addControl(sv);
-
-        var mainStack = new BABYLON.GUI.StackPanel();
-        mainStack.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
-        sv.addControl(mainStack);
-
-        // 3. Build the Hierarchy from cleanmenu
-        Object.keys(cleanmenu).sort().forEach(function(parentName) {
-            
-            // --- PARENT BUTTON ---
-            var parBtn = BABYLON.GUI.Button.CreateSimpleButton("par_" + parentName, (expandedCategories[parentName] ? "▼ " : "▶ ") + parentName);
-            parBtn.width = "100%";
-            parBtn.height = "60px";
-            parBtn.color = "white";
-            parBtn.fontSize = 24;
-            parBtn.background = "#1e3a5f";
-            parBtn.thickness = 1;
-            parBtn.onPointerUpObservable.add(function() {
-                expandedCategories[parentName] = !expandedCategories[parentName];
-                buildMeshListPanel(); // Rebuild to expand/collapse
-            });
-            mainStack.addControl(parBtn);
-
-            // --- CHILD BUTTONS ---
-            if (expandedCategories[parentName]) {
-                cleanmenu[parentName].forEach(function(childName) {
-                    var isVis = false, isHl = false;
-                    scene.meshes.forEach(function(m) {
-                        if (m.name === childName) {
-                            if (m.isVisible) isVis = true;
-                            if (hl.hasMesh(m)) isHl = true;
-                        }
-                    });
-
-                    var childContainer = new BABYLON.GUI.StackPanel();
-                    childContainer.isVertical = false;
-                    childContainer.width = "100%";
-                    childContainer.height = "50px";
-
-                    // Child Name (Highlight Toggle)
-                    var nameBtn = BABYLON.GUI.Button.CreateSimpleButton("ch_" + childName, "   " + childName);
-                    nameBtn.width = "550px";
-                    nameBtn.height = "50px";
-                    nameBtn.fontSize = 20;
-                    nameBtn.color = isVis ? "#e2e8f0" : "#64748b";
-                    nameBtn.background = isHl ? "#14532d" : "#1e293b"; // Green if highlighted
-                    nameBtn.thickness = 1;
-                    nameBtn.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-                    nameBtn.onPointerUpObservable.add(function() {
-                        if (isHl) {
-                            hl.removeAllMeshes();
-                        } else {
-                            hl.removeAllMeshes();
-                            scene.meshes.forEach(function(m) {
-                                if (m.name === childName) {
-                                    hl.addMesh(m, BABYLON.Color3.Green());
-                                    m.isVisible = true; // Ensure visible when highlighting
-                                }
-                            });
-                        }
-                        syncHtmlMenu();
-                        buildMeshListPanel();
-                    });
-                    childContainer.addControl(nameBtn);
-
-                    // Child Visibility Toggle
-                    var visBtn = BABYLON.GUI.Button.CreateSimpleButton("vis_" + childName, isVis ? "👁" : "🚫");
-                    visBtn.width = "150px";
-                    visBtn.height = "50px";
-                    visBtn.fontSize = 22;
-                    visBtn.color = "white";
-                    visBtn.background = isVis ? "#05966966" : "#dc262666";
-                    visBtn.onPointerUpObservable.add(function() {
-                        var nv = !isVis;
-                        scene.meshes.forEach(function(m) {
-                            if (m.name === childName) {
-                                m.isVisible = nv;
-                                if (!nv) hl.removeMesh(m); // Remove highlight if hidden
-                            }
-                        });
-                        syncHtmlMenu();
-                        buildMeshListPanel();
-                    });
-                    childContainer.addControl(visBtn);
-
-                    mainStack.addControl(childContainer);
-                });
-            }
-        });
-
-        // 4. Footer Close Button
-        var closeBtn = BABYLON.GUI.Button.CreateSimpleButton("closeMenu", "✕ Fermer le menu");
-        closeBtn.width = "100%";
-        closeBtn.height = "60px";
-        closeBtn.color = "white";
-        closeBtn.fontSize = 24;
-        closeBtn.background = "#7f1d1d";
-        closeBtn.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
-        closeBtn.onPointerUpObservable.add(disposeMeshListPanel);
-        tex.addControl(closeBtn);
-    }
-
     // ── Bouton Menu conditionnel ──────────────────────────────────────────────
     var menuAvailable = (extension === '.glb') && (Object.keys(cleanmenu).length > 0);
 
@@ -642,6 +433,179 @@ function initVR(xrHelper) {
             }
         }
     ];
+
+    // ── Mesh list panel ───────────────────────────────────────────────────────
+    var vrMeshListPanel = null;
+
+    function disposeMeshListPanel() {
+        if (vrMeshListPanel) {
+            vrMeshListPanel.dispose();
+            vrMeshListPanel = null;
+        }
+    }
+
+    function toggleMeshListPanel() {
+        // 1. Close Info Panel if open
+        if (vrInfoPanel) {
+            vrInfoPanel.dispose(); 
+            vrInfoPanel = null; 
+        }
+
+        // 2. Toggle Off if already open
+        if (vrMeshListPanel) {
+            disposeMeshListPanel();
+            return;
+        }
+
+        // 3. Create the 3D Plane
+        vrMeshListPanel = BABYLON.MeshBuilder.CreatePlane('vrMeshListPanel',
+            { width: 0.35, height: 0.45, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, scene);
+        
+        // CRITICAL: Must be pickable for GUI rays to interact with it
+        vrMeshListPanel.isPickable = true; 
+        
+        // Attach to left controller, slightly offset so it doesn't clip the hand
+        if (leftGripMesh) {
+            vrMeshListPanel.parent   = leftGripMesh;
+            vrMeshListPanel.position = new BABYLON.Vector3(-0.1, -0.1, -0.1); 
+            vrMeshListPanel.rotation = new BABYLON.Vector3(Math.PI / 2, 0, Math.PI); 
+        } else {
+            vrMeshListPanel.position = new BABYLON.Vector3(0, 1.5, 0.8);
+        }
+
+        // 4. Create the GUI Texture (High resolution for crisp text)
+        var adt = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(vrMeshListPanel, 1024, 1316);
+        adt.background = '#4285F4'; // Deep blue background
+
+        // 5. Scroll Viewer for long lists
+        var sv = new BABYLON.GUI.ScrollViewer();
+        sv.thickness = 0;
+        sv.color = "#93c5fd"; // Scrollbar color
+        sv.width = "100%";
+        sv.height = "100%";
+        adt.addControl(sv);
+
+        // 6. Main Container
+        var mainStack = new BABYLON.GUI.StackPanel();
+        mainStack.width = "100%";
+        mainStack.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+        sv.addControl(mainStack);
+
+        var sortedKeys = Object.keys(cleanmenu).sort();
+        var allChildStacks = []; // Track stacks to auto-close others (Accordion effect)
+
+        // 7. Build Categories and Items
+        sortedKeys.forEach(function(parname) {
+            var displayParname = parname;
+            if (parname.endsWith('_right')) displayParname = 'Right ' + parname.slice(0, -6);
+            if (parname.endsWith('_left'))  displayParname = 'Left '  + parname.slice(0, -5);
+
+            var categoryContainer = new BABYLON.GUI.StackPanel();
+            categoryContainer.width = "100%";
+            mainStack.addControl(categoryContainer);
+
+            // Category Button (The <summary> equivalent)
+            var catBtn = BABYLON.GUI.Button.CreateSimpleButton("cat_" + parname, "▶ " + displayParname);
+            catBtn.width = "100%";
+            catBtn.height = "70px";
+            catBtn.color = "white";
+            catBtn.background = "#2563eb"; // Lighter blue
+            catBtn.thickness = 1;
+            catBtn.fontSize = 32;
+            catBtn.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+            catBtn.paddingLeft = "10px";
+            categoryContainer.addControl(catBtn);
+
+            // Children Stack (The <p> items equivalent)
+            var childrenStack = new BABYLON.GUI.StackPanel();
+            childrenStack.width = "100%";
+            childrenStack.isVisible = false; // Collapsed by default
+            categoryContainer.addControl(childrenStack);
+            
+            allChildStacks.push({ stack: childrenStack, btn: catBtn, name: "▶ " + displayParname });
+
+            // Accordion Toggle Logic
+            catBtn.onPointerUpObservable.add(function() {
+                var isCurrentlyOpen = childrenStack.isVisible;
+                
+                // Close all categories first
+                allChildStacks.forEach(function(item) {
+                    item.stack.isVisible = false;
+                    item.btn.textBlock.text = item.name; 
+                });
+
+                // If it was closed, open it and change the arrow
+                if (!isCurrentlyOpen) {
+                    childrenStack.isVisible = true;
+                    catBtn.textBlock.text = "▼ " + displayParname;
+                }
+            });
+
+            // 8. Populate Children
+            var childrenNames = cleanmenu[parname];
+            childrenNames.forEach(function(childName) {
+                var childBtn = BABYLON.GUI.Button.CreateSimpleButton("child_" + childName, childName);
+                childBtn.width = "100%";
+                childBtn.height = "60px";
+                childBtn.color = "white";
+                childBtn.background = "#0d47a1"; // Darker blue
+                childBtn.thickness = 1;
+                childBtn.fontSize = 26;
+                childBtn.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+                childBtn.paddingLeft = "40px"; // Indent to show hierarchy
+                childrenStack.addControl(childBtn);
+
+                var targetMesh = scene.getMeshByName(childName);
+                
+                // Track state internally: 0=Default, 1=Highlighted, 2=Hidden
+                childBtn.partState = 0; 
+
+                // Sync initial button state with current mesh state
+                if (targetMesh) {
+                    if (!targetMesh.isVisible) {
+                        childBtn.partState = 2;
+                        childBtn.color = "#9ca3af"; 
+                        childBtn.background = "#111827"; 
+                    } else if (hl.hasMesh(targetMesh)) {
+                        childBtn.partState = 1;
+                        childBtn.background = "#3b82f6"; 
+                        childBtn.color = "#fbbf24"; 
+                    }
+                }
+
+                // 9. Implement the 3-State Click Logic
+                childBtn.onPointerUpObservable.add(function() {
+                    if (!targetMesh) return;
+
+                    var s = childBtn.partState;
+
+                    if (s === 0) {
+                        // State 0 -> 1: Highlight
+                        hl.removeAllMeshes(); // Clear others to match web logic
+                        hl.addMesh(targetMesh, BABYLON.Color3.Green());
+                        childBtn.partState = 1;
+                        childBtn.background = "#3b82f6"; // Highlight background
+                        childBtn.color = "#fbbf24";      // Yellow text
+                        
+                    } else if (s === 1) {
+                        // State 1 -> 2: Hide
+                        hl.removeMesh(targetMesh);
+                        targetMesh.isVisible = false;
+                        childBtn.partState = 2;
+                        childBtn.background = "#111827"; // Dark background
+                        childBtn.color = "#9ca3af";      // Gray text
+                        
+                    } else if (s === 2) {
+                        // State 2 -> 0: Restore
+                        targetMesh.isVisible = true;
+                        childBtn.partState = 0;
+                        childBtn.background = "#1e40af"; // Default background
+                        childBtn.color = "white";        // Default text
+                    }
+                });
+            });
+        });
+    }
 
     function createMenuButton(def, index, total, rootNode) {
         var angle  = (index / total) * Math.PI * 2;
