@@ -122,14 +122,18 @@ scene.executeWhenReady(function() {
         });
     }
 
-    // Camera
-    scene.createDefaultCamera(true, true, true);
-    cam = scene.activeCamera;
-    cam.wheelPrecision          = 600;
-    cam.pinchPrecision          = 800;
-    cam.alpha                  += Math.PI;
-    cam.panningSensibility      = 1600;
-    cam.useAutoRotationBehavior = false;
+    // Camera — splat/PLY files configure their own camera in the ImportMeshAsync
+    // .then() callback above and set the global `cam` there. Creating a default
+    // camera here would overwrite those settings, so we skip it for that format.
+    if (extension !== '.splat' && extension !== '.ply') {
+        scene.createDefaultCamera(true, true, true);
+        cam = scene.activeCamera;
+        cam.wheelPrecision          = 600;
+        cam.pinchPrecision          = 800;
+        cam.alpha                  += Math.PI;
+        cam.panningSensibility      = 1600;
+        cam.useAutoRotationBehavior = false;
+    }
 
     // Environment intensity (affects PBR materials and the default environment texture)
     scene.environmentIntensity = 1.6;

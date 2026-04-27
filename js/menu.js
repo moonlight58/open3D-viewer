@@ -34,6 +34,10 @@ function buildMenu() {
             var childmeshcompactar = [];
             var childMesh = el.getChildMeshes();
             for (var i = 0; i < childMesh.length; i++) {
+                // INTENTIONAL: strips everything after the first underscore so that
+                // meshes sharing a base name (e.g. femur_001, femur_002) are merged
+                // into a single menu entry. This permanently renames the Babylon mesh
+                // object — do not rely on original names anywhere after buildMenu() runs.
                 var rename_mesh = childMesh[i].name.split('_');
                 childMesh[i].name = rename_mesh[0];
                 if (!childmeshcompactar.includes(childMesh[i].name)) {
@@ -129,32 +133,29 @@ function buildMenu() {
 
     // ── Pointer: click to highlight, double-click to hide ────────────────────
     scene.onPointerObservable.add(function(evt) {
-        var pointerInfo = evt.pickInfo;
 
         var invalidNames = [
-            'BackgroundSkybox', 
-            'BackgroundPlane', 
-            'vrMeshListPanel', 
-            'vrInfoPanel', 
-            'modelPivot', 
-            'rayCursor', 
+            'BackgroundSkybox',
+            'BackgroundPlane',
+            'vrMeshListPanel',
+            'vrInfoPanel',
+            'modelPivot',
+            'rayCursor',
             '__root__'
         ];
 
-        var pickResult = scene.pick(scene.pointerX, scene.pointerY);
-        var isGlbPick  = pickResult.pickedMesh != null &&
-                         !model.endsWith('.ply') &&
-                         !model.endsWith('.obj') &&
-                         !model.endsWith('.splat');
-        
-        var isGlbPick = pointerInfo.pickInfo && 
-                pointerInfo.pickInfo.hit && 
-                pointerInfo.pickInfo.pickedMesh && 
-                !invalidNames.includes(pointerInfo.pickInfo.pickedMesh.name);
+        // Single authoritative pickResult from the observable event data.
+        // (The previous code ran a redundant scene.pick() here on every pointer
+        // event and immediately shadowed it — removed to avoid the double raycast.)
+        var pickResult = evt.pickInfo;
+
+        var isGlbPick = pickResult &&
+                        pickResult.hit &&
+                        pickResult.pickedMesh &&
+                        !invalidNames.includes(pickResult.pickedMesh.name);
 
         switch (evt.type) {
             case BABYLON.PointerEventTypes.POINTERMOVE:
-                var pickResult = evt.pickInfo;
                 hl.removeAllMeshes();
 
                 // Re-apply highlights set by desktop menu click (elements with class 'hl')
@@ -171,11 +172,13 @@ function buildMenu() {
                     });
                 }
 
+                // Add hover highlight — skip VR UI meshes but don't early-return
+                // (returning here would also skip POINTERTAP/POINTERDOUBLETAP
+                // processing on that observable tick in some Babylon versions)
                 if (pickResult.hit && pickResult.pickedMesh) {
-                    if (typeof isModelMesh === 'function' && !isModelMesh(pickResult.pickedMesh)) {
-                        return;
+                    if (typeof isModelMesh !== 'function' || isModelMesh(pickResult.pickedMesh)) {
+                        hl.addMesh(pickResult.pickedMesh, BABYLON.Color3.Green());
                     }
-                    hl.addMesh(pickResult.pickedMesh, BABYLON.Color3.Green());
                 }
                 break;
 
@@ -192,8 +195,8 @@ function buildMenu() {
                                 var dot             = pickResult.pickedMesh.name.charAt(pickResult.pickedMesh.name.length - 2);
                                 var reducedmeshname = pickResult.pickedMesh.name;
                                 var parentmeshname  = getParent(pickResult.pickedMesh.name);
-                                if (dot === '.') { reducedmeshname = reducedmeshname.slice(0, -2); parentmeshname = parentmeshname.split('_').shift(); }
-                                showLabel(reducedmeshname, parentmeshname);
+                                if (dot === '.') { reducedmeshname = reducedmeshname.slice(0, -2); if (parentmeshname) parentmeshname = parentmeshname.split('_').shift(); }
+                                showLabel(reducedmeshname, parentmeshname || '');
                             }
                         }
                     }
@@ -202,28 +205,32 @@ function buildMenu() {
 
             case BABYLON.PointerEventTypes.POINTERDOUBLETAP:
                 if (isGlbPick) {
-                    // Hide the mesh on double-click and update menu state
                     document.getElementById('mesh-label').innerHTML = '';
                     hl.removeAllMeshes();
                     for (const mesh of scene.meshes) {
                         if (mesh.name === pickResult.pickedMesh.name) mesh.isVisible = false;
                     }
 
-                    // find the corresponding <p> element and toggle it off, then check if all siblings are off to toggle parent
-                    var myCollection = document.getElementsByTagName('p');
-                    for (var k = 0; k < myCollection.length; k++) {
-                        if (myCollection[k].innerHTML === pickResult.pickedMesh.name) {
-                            myCollection[k].classList.replace('on', 'off');
-                        }
-                    }
+                    // Static NodeList (querySelectorAll) avoids live-collection
+                    // mutation hazard that getElementsByTagName('p') would cause.
+                    document.querySelectorAll('p').forEach(function(p) {
+                        if (p.innerHTML === pickResult.pickedMesh.name) p.classList.replace('on', 'off');
+                    });
 
-                    // Update parent toggle state
-                    var parchilds = document.getElementById(getParent(pickResult.pickedMesh.name)).parentNode.parentNode.children;
+                    // Guard against getParent() returning undefined for unrecognised
+                    // mesh names (e.g. OBJ meshes, or names changed after buildMenu).
+                    var parentKey = getParent(pickResult.pickedMesh.name);
+                    if (!parentKey) break;
+
+                    var parentEl = document.getElementById(parentKey);
+                    if (!parentEl) break;
+
+                    var parchilds = parentEl.parentNode.parentNode.children;
                     var count = 0;
                     for (var l = 0; l < parchilds.length; l++) {
                         if (parchilds[l].classList.contains('ch') && parchilds[l].classList.contains('on')) count++;
                     }
-                    if (count === 0) document.getElementById(getParent(pickResult.pickedMesh.name)).classList.replace('on', 'off');
+                    if (count === 0) parentEl.classList.replace('on', 'off');
                 }
                 break;
         }
@@ -245,13 +252,16 @@ function buildMenu() {
                 if (item.charAt(1) === '-') window.document.getElementById(item.slice(2)).click();
                 if (item.charAt(1) === '+') window.document.getElementById(item.slice(2)).className = 'cp par on';
             } else {
-                for (const element of document.getElementsByClassName('ch cp')) {
+                // querySelectorAll returns a static NodeList — safe to iterate
+                // even if click handlers modify classes during the loop.
+                document.querySelectorAll('.ch.cp').forEach(function(element) {
                     if (item.charAt(1) === '+' && item.slice(2) === element.innerHTML) element.click();
                     else if (item.charAt(1) === '-' && item.slice(2) === element.innerHTML) {
-                        scene.getMeshByName(element.innerHTML).isVisible = false;
+                        var m = scene.getMeshByName(element.innerHTML);
+                        if (m) m.isVisible = false;
                         element.className = 'ch cp off';
                     }
-                }
+                });
             }
         });
     }

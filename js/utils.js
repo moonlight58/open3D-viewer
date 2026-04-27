@@ -45,12 +45,14 @@ function toggleFullScreen(elem) {
 
 function exportListing() {
     var exportstring = '';
-    for (const element of document.getElementsByClassName('ch cp on')) {
+    // querySelectorAll returns a static NodeList — safe against live-collection
+    // mutation if class changes occur during iteration.
+    document.querySelectorAll('.ch.cp.on').forEach(function(element) {
         var parentname = element.parentElement.firstChild.textContent;
         if (parentname.startsWith('Left '))  { parentname = parentname.substring(5);  parentname = parentname.concat('_left');  }
         if (parentname.startsWith('Right ')) { parentname = parentname.substring(6); parentname = parentname.concat('_right'); }
         exportstring += parentname.concat('#', element.innerHTML) + '\n';
-    }
+    });
     navigator.clipboard.writeText(exportstring)
         .then(function()    { prompt('We have copied the active structures list to your clipboard. Please try to paste it somewhere or copy the selected data from below:', exportstring); })
         .catch(function(err){ prompt('Failed to copy text to clipboard! Please copy and paste the selected data from below:', exportstring); });
@@ -63,8 +65,10 @@ function showLabel(struc, group) {
 }
 
 // Returns the parent key in menupars whose values contain the given mesh name.
+// Returns undefined (with a console warning) if not found — callers must guard.
 function getParent(struc) {
     for (var i = 0; i < menuparsvalues.length; i++) {
         if (menuparsvalues[i].includes(struc)) return menupars[i];
     }
+    console.warn('getParent: no parent found for mesh "' + struc + '". It may have been renamed or belongs to an unsupported format.');
 }
