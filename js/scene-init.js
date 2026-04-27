@@ -134,15 +134,22 @@ scene.executeWhenReady(function() {
     // Environment intensity (affects PBR materials and the default environment texture)
     scene.environmentIntensity = 1.6;
 
+    scene.meshes.forEach(function(m) {
+        // Si le mesh s'appelle __root__, on le cache et on empêche de le cibler
+        if (m.name === '__root__') {
+            m.isVisible = false;
+            m.isPickable = false;
+        }
+    });
 
     // Disable frustum culling on every mesh (and on any mesh added later).
     scene.meshes.forEach(function(m) { m.alwaysSelectAsActiveMesh = true; });
     scene.onNewMeshAddedObservable.add(function(m) {
         m.alwaysSelectAsActiveMesh = true;
-        // Destroy background meshes whenever BabylonJS creates them
-        // (happens twice: once for desktop, once when XR initialises)
         if (m.name === 'BackgroundSkybox' || m.name === 'BackgroundPlane') {
-            m.dispose();
+            // Use setTimeout(0) — disposing synchronously during mesh-added can be
+            // unstable in some BabylonJS versions and the mesh sneaks into one frame.
+            setTimeout(function() { if (!m.isDisposed()) m.dispose(); }, 0);
         }
     });
 
@@ -154,7 +161,7 @@ scene.executeWhenReady(function() {
     // ── Build anatomy menu (menu.js) ──────────────────────────────────────────
     buildMenu();
 
-    // ── WebXR setup (vr.js) ───────────────────────────────────────────────────
+    // WebXR setup (vr.js) 
     scene.createDefaultXRExperienceAsync({
         floorMeshes          : [],
         disableTeleportation : true,
@@ -166,17 +173,26 @@ scene.executeWhenReady(function() {
             console.log('WebXR not supported on this device.');
             return;
         }
-        initVR(xrHelper);
+        window._xrHelper = xrHelper; // exposed for pointerMovePredicate XR-state check
+        initVR(xrHelper);        
     }).catch(function(err) { console.warn('WebXR setup failed:', err); });
 
     // ── Render loop ───────────────────────────────────────────────────────────
     engine.runRenderLoop(function() { scene.render(); });
-
-    // Optimise pointer-move picking (Button3D handles its own picking internally)
-    scene.skipPointerMovePicking = false;
+ 
+    // Optimise pointer-move picking for VR: when XR is active, only raycast
+    // against the UI panels (the VR grab loop uses pickWithRay independently).
+    // On desktop, allow the full scene so hover highlighting still works.
     scene.pointerMovePredicate = function(mesh) {
-        // Restrict scene raycasts to our UI panels to maintain high performance
-        return mesh.name === 'vrMeshListPanel' || mesh.name === 'vrInfoPanel';
+        var inXR = typeof BABYLON !== 'undefined' &&
+                   typeof BABYLON.WebXRState !== 'undefined' &&
+                   window._xrHelper &&
+                   window._xrHelper.baseExperience &&
+                   window._xrHelper.baseExperience.state === BABYLON.WebXRState.IN_XR;
+        if (inXR) {
+            return mesh.name === 'vrMeshListPanel' || mesh.name === 'vrInfoPanel';
+        }
+        return true; // desktop: pick all visible pickable meshes (needed for hover hl)
     };
 
     // ── Desktop UI event listeners ────────────────────────────────────────────

@@ -6,8 +6,7 @@
 // Globals read: scene, model, hl, cam (set by scene-init.js)
 // ─────────────────────────────────────────────────────────────────────────────
 
-var SKIP_NAMES = ['vrBtn', 'BackgroundPlane', 'BackgroundSkybox', 'vrHUDPlane', 'vrMeshListPanel', 'modelPivot', 'vrInfoPanel', 'rayCursor'];
-
+var SKIP_NAMES = ['vrBtn', 'BackgroundPlane', 'BackgroundSkybox', 'vrHUDPlane', 'vrMeshListPanel', 'modelPivot', 'vrInfoPanel', 'rayCursor']; 
 function isModelMesh(m) {
     return !SKIP_NAMES.some(function(p) { return m.name.startsWith(p); });
 }
@@ -174,7 +173,7 @@ function initVR(xrHelper) {
                     var sv0 = sqR.value !== undefined ? sqR.value : (sqR.pressed ? 1.0 : 0);
                     if (sv0 > 0.1) {
                         var piv0 = ensureModelPivot();
-                        var s0   = Math.min(5.0, piv0.scaling.x + sv0 * 0.003);
+                        var s0   = Math.min(5.0, piv0.scaling.x + sv0 * 0.006);
                         piv0.scaling = new BABYLON.Vector3(s0, s0, s0);
                     }
                 }
@@ -582,7 +581,9 @@ function initVR(xrHelper) {
                     if (s === 0) {
                         // State 0 -> 1: Highlight
                         hl.removeAllMeshes(); // Clear others to match web logic
+                        if (window._vrPersistentHighlights) window._vrPersistentHighlights.clear();
                         hl.addMesh(targetMesh, BABYLON.Color3.Green());
+                        if (window._vrPersistentHighlights) window._vrPersistentHighlights.add(targetMesh.name);
                         childBtn.partState = 1;
                         childBtn.background = "#3b82f6"; // Highlight background
                         childBtn.color = "#fbbf24";      // Yellow text
@@ -590,6 +591,7 @@ function initVR(xrHelper) {
                     } else if (s === 1) {
                         // State 1 -> 2: Hide
                         hl.removeMesh(targetMesh);
+                        if (window._vrPersistentHighlights) window._vrPersistentHighlights.delete(targetMesh.name);
                         targetMesh.isVisible = false;
                         childBtn.partState = 2;
                         childBtn.background = "#111827"; // Dark background
@@ -598,6 +600,7 @@ function initVR(xrHelper) {
                     } else if (s === 2) {
                         // State 2 -> 0: Restore
                         targetMesh.isVisible = true;
+                        if (window._vrPersistentHighlights) window._vrPersistentHighlights.delete(targetMesh.name);
                         childBtn.partState = 0;
                         childBtn.background = "#1e40af"; // Default background
                         childBtn.color = "white";        // Default text
@@ -671,7 +674,7 @@ function initVR(xrHelper) {
                     var sv = sqL.value !== undefined ? sqL.value : (sqL.pressed ? 1.0 : 0);
                     if (sv > 0.1) {
                         var pivot = ensureModelPivot();
-                        var s = Math.max(0.05, pivot.scaling.x - sv * 0.003);
+                        var s = Math.max(0.05, pivot.scaling.x - sv * 0.006);
                         pivot.scaling = new BABYLON.Vector3(s, s, s);
                     }
                 });
@@ -686,6 +689,13 @@ function initVR(xrHelper) {
 
     // ── Nettoyage à la sortie de VR ───────────────────────────────────────────
     xrHelper.baseExperience.onStateChangedObservable.add(function(state) {
+        if (state === BABYLON.WebXRState.IN_XR) {
+            ['BackgroundSkybox', 'BackgroundPlane'].forEach(function(name) {
+                var m = scene.getMeshByName(name);
+                if (m) m.dispose();
+            });
+        }
+
         if (state === BABYLON.WebXRState.NOT_IN_XR) {
             stopManipLoop();
             rightGrabbed        = false;

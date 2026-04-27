@@ -8,6 +8,9 @@
 
 function buildMenu() {
 
+    // Shared set for VR persistent highlights (VR GUI has no DOM elements with class 'hl')
+    window._vrPersistentHighlights = new Set();
+
     // ── Mirror overview model left/right ─────────────────────────────────────
     if (model.split('-')[0] === 'overview') {
         scene.transformNodes.forEach(function(el) {
@@ -126,30 +129,56 @@ function buildMenu() {
 
     // ── Pointer: click to highlight, double-click to hide ────────────────────
     scene.onPointerObservable.add(function(evt) {
+        var pointerInfo = evt.pickInfo;
+
+        var invalidNames = [
+            'BackgroundSkybox', 
+            'BackgroundPlane', 
+            'vrMeshListPanel', 
+            'vrInfoPanel', 
+            'modelPivot', 
+            'rayCursor', 
+            '__root__'
+        ];
+
         var pickResult = scene.pick(scene.pointerX, scene.pointerY);
         var isGlbPick  = pickResult.pickedMesh != null &&
                          !model.endsWith('.ply') &&
                          !model.endsWith('.obj') &&
                          !model.endsWith('.splat');
+        
+        var isGlbPick = pointerInfo.pickInfo && 
+                pointerInfo.pickInfo.hit && 
+                pointerInfo.pickInfo.pickedMesh && 
+                !invalidNames.includes(pointerInfo.pickInfo.pickedMesh.name);
 
         switch (evt.type) {
             case BABYLON.PointerEventTypes.POINTERMOVE:
-                var pickResult = evt.pickInfo;                
-                // 1. On retire la surbrillance précédente (votre code existant)
+                var pickResult = evt.pickInfo;
                 hl.removeAllMeshes();
 
-                // 2. LA CORRECTION : On vérifie qu'on touche un objet ET que ce n'est PAS l'interface VR
-                if (pickResult.hit && pickResult.pickedMesh) {
-                    
-                    // Si le mesh fait partie de l'UI (vrMeshListPanel, etc.), on ignore la surbrillance !
-                    if (typeof isModelMesh === 'function' && !isModelMesh(pickResult.pickedMesh)) {
-                        return; // Laisse le GUI 2D gérer l'interaction en interne
-                    }
+                // Re-apply highlights set by desktop menu click (elements with class 'hl')
+                document.querySelectorAll('.cp.hl').forEach(function(hlEl) {
+                    var m = scene.getMeshByName(hlEl.innerHTML);
+                    if (m && m.isVisible) hl.addMesh(m, BABYLON.Color3.Green());
+                });
 
-                    // 3. Sinon, c'est un modèle anatomique normal, on le met en surbrillance (votre code existant)
-                    hl.addMesh(pickResult.pickedMesh, BABYLON.Color3.Green()); // ou la couleur que vous utilisez
+                // Re-apply highlights set by VR menu (tracked in _vrPersistentHighlights)
+                if (window._vrPersistentHighlights) {
+                    window._vrPersistentHighlights.forEach(function(meshName) {
+                        var m = scene.getMeshByName(meshName);
+                        if (m && m.isVisible) hl.addMesh(m, BABYLON.Color3.Green());
+                    });
+                }
+
+                if (pickResult.hit && pickResult.pickedMesh) {
+                    if (typeof isModelMesh === 'function' && !isModelMesh(pickResult.pickedMesh)) {
+                        return;
+                    }
+                    hl.addMesh(pickResult.pickedMesh, BABYLON.Color3.Green());
                 }
                 break;
+
             case BABYLON.PointerEventTypes.POINTERTAP:
                 if (isGlbPick) {
                     if (hl.hasMesh(pickResult.pickedMesh)) {
@@ -173,17 +202,22 @@ function buildMenu() {
 
             case BABYLON.PointerEventTypes.POINTERDOUBLETAP:
                 if (isGlbPick) {
+                    // Hide the mesh on double-click and update menu state
                     document.getElementById('mesh-label').innerHTML = '';
                     hl.removeAllMeshes();
                     for (const mesh of scene.meshes) {
                         if (mesh.name === pickResult.pickedMesh.name) mesh.isVisible = false;
                     }
+
+                    // find the corresponding <p> element and toggle it off, then check if all siblings are off to toggle parent
                     var myCollection = document.getElementsByTagName('p');
                     for (var k = 0; k < myCollection.length; k++) {
                         if (myCollection[k].innerHTML === pickResult.pickedMesh.name) {
                             myCollection[k].classList.replace('on', 'off');
                         }
                     }
+
+                    // Update parent toggle state
                     var parchilds = document.getElementById(getParent(pickResult.pickedMesh.name)).parentNode.parentNode.children;
                     var count = 0;
                     for (var l = 0; l < parchilds.length; l++) {

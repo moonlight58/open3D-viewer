@@ -4,7 +4,7 @@
 > [!NOTE]
 > Ce projet est un fork du travail original de Djansma : [github.com/djansma/open3dviewer](https://github.com/djansma/open3dviewer)
 
-Visualiseur web 3D pour fichiers .glb, développé par l'équipe **Animation Numérique et Innovante & Low-Tech (ANI & Low-Tech)**, en partenariat avec le **Learning Centre Claude Oytana** (Besançon, France).
+Visualiseur web 3D pour fichiers .glb, .obj et .ply développé par l'équipe **Animation Numérique et Innovante & Low-Tech (ANI & Low-Tech)**, en partenariat avec le **Learning Centre Claude Oytana** (Besançon, France).
 
 ## Présentation du projet
 
@@ -12,8 +12,8 @@ Ce projet a été créé pour rendre la "Salle d'Immersion" plus ludique et inte
 
 ## Fonctionnalités
 
-- Visualisation et interaction avec des modèles 3D (.glb) directement dans le navigateur (Chrome, Edge, Firefox, etc.)
-- Support VR pour une expérience immersive
+- Visualisation et interaction avec des modèles 3D (.glb, .obj, .ply) directement dans le navigateur (Chrome, Edge, Firefox, etc.)
+- Support VR pour une expérience immersive (casques Oculus, HTC Vive, etc.)
 - Contrôles clavier et souris pour la navigation
 - Contrôles tactiles pour les appareils mobiles
 - Activation/désactivation des structures individuellement ou en groupe
